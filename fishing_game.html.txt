@@ -1,0 +1,1285 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Fishing In The Deep</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #02111f;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #fff;
+        }
+
+        #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #02111f;
+        }
+
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .hud-panel {
+            position: absolute;
+            pointer-events: auto;
+        }
+
+        #coinCounter,
+        #fishCounter {
+            top: 1.5vh;
+            left: 1.5vw;
+            padding: 0.6em 1em;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            transition: opacity 0.2s;
+        }
+
+        #coinCounter span.label,
+        #fishCounter span.label {
+            font-weight: 600;
+        }
+
+        #coinCounter span.value,
+        #fishCounter span.value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        #fishCounter {
+            opacity: 0;
+        }
+
+        #fishFillOuter {
+            width: 120px;
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+        }
+
+        #fishFillInner {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4cd964, #ffc800);
+            transition: width 0.1s;
+        }
+
+        #menuPanel {
+            bottom: 4vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.2vh;
+            text-align: center;
+        }
+
+        #upgrades {
+            display: flex;
+            gap: 1.2vw;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 1.5vh;
+        }
+
+        .upgrade-btn {
+            min-width: 160px;
+            padding: 0.6em 0.9em;
+            border-radius: 0.75em;
+            border: none;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.55);
+            color: #fff;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.15em;
+            align-items: flex-start;
+            transition: background 0.15s, transform 0.1s, opacity 0.2s;
+        }
+
+        .upgrade-btn span.title {
+            font-weight: 600;
+        }
+
+        .upgrade-btn span.info {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .upgrade-btn span.cost {
+            font-size: 0.8rem;
+            color: #ffd96a;
+        }
+
+        .upgrade-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        .upgrade-btn:not(:disabled):hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .upgrade-btn:not(:disabled):active {
+            transform: scale(0.97);
+        }
+
+        #playButton {
+            padding: 0.7em 1.6em;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, #26c6da, #42a5f5);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.45em;
+            box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.6);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        #playButton:active {
+            transform: translateY(1px) scale(0.98);
+            box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.5);
+        }
+
+        #gauge {
+            width: 220px;
+            height: 14px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.6);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #gaugeFill {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to right,
+                    red 0%,
+                    yellow 25%,
+                    green 50%,
+                    yellow 75%,
+                    red 100%);
+            opacity: 0.6;
+        }
+
+        #gaugePointer {
+            position: absolute;
+            top: -3px;
+            width: 4px;
+            height: 20px;
+            border-radius: 999px;
+            background: #fff;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        #tutorialText {
+            position: absolute;
+            top: 12vh;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.6em 1.2em;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            font-size: 1rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+
+        #summaryPanel,
+        #endPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 260px;
+            padding: 1.2em 1.4em;
+            border-radius: 1em;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+
+        #summaryPanel h2,
+        #endPanel h2 {
+            margin: 0 0 0.4em;
+            font-size: 1.2rem;
+        }
+
+        #summaryPanel p,
+        #endPanel p {
+            margin: 0.15em 0;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            margin-top: 0.8em;
+            padding: 0.5em 1.2em;
+            border-radius: 999px;
+            border: none;
+            background: linear-gradient(135deg, #26c6da, #42a5f5);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .btn:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        #catchPopups {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .catch-popup {
+            position: absolute;
+            font-size: 0.9rem;
+            font-weight: 600;
+            pointer-events: none;
+            white-space: nowrap;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+        }
+
+        .rarity-common {
+            color: #e0f7fa;
+        }
+
+        .rarity-rare {
+            color: #64b5f6;
+        }
+
+        .rarity-amazing {
+            color: #ba68c8;
+        }
+
+        .rarity-legendary {
+            color: #ffeb3b;
+        }
+
+        .amount-label {
+            color: #fff;
+        }
+
+        #debug {
+            position: absolute;
+            bottom: 0.5vh;
+            left: 0.5vw;
+            font-size: 0.7rem;
+            opacity: 0.5;
+            pointer-events: none;
+            white-space: pre;
+            display: none;
+        }
+
+        @media (max-width:600px) {
+
+            #coinCounter,
+            #fishCounter {
+                font-size: 0.9rem;
+            }
+
+            #gauge {
+                width: 180px;
+            }
+
+            .upgrade-btn {
+                min-width: 140px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+        <div id="coinCounter" class="hud-panel">
+            <span class="label">Coins:</span><span class="value" id="coinValue">100</span>
+        </div>
+        <div id="fishCounter" class="hud-panel">
+            <span class="label">Fish:</span><span class="value" id="fishValue">0/6</span>
+            <div id="fishFillOuter">
+                <div id="fishFillInner"></div>
+            </div>
+        </div>
+
+        <div id="menuPanel" class="hud-panel">
+            <div id="upgrades">
+                <button id="upgradeMaxFishButton" class="upgrade-btn">
+                    <span class="title">Max Fish</span>
+                    <span class="info" id="fishUpgradeInfo">6 → 7</span>
+                    <span class="cost" id="fishUpgradeCost">Cost: 50</span>
+                </button>
+                <button id="upgradeMaxDepthButton" class="upgrade-btn">
+                    <span class="title">Max Depth</span>
+                    <span class="info" id="depthUpgradeInfo">5m → 10m</span>
+                    <span class="cost" id="depthUpgradeCost">Cost: 50</span>
+                </button>
+            </div>
+            <button id="playButton">
+                <span id="playLabel">Cast Line</span>
+                <div id="gauge">
+                    <div id="gaugeFill"></div>
+                    <div id="gaugePointer"></div>
+                </div>
+            </button>
+        </div>
+
+        <div id="tutorialText">Move the hook to catch fish</div>
+
+        <div id="summaryPanel">
+            <h2>Catch Summary</h2>
+            <p id="summaryFishText">0 fish caught</p>
+            <p id="summaryTotalText">Total: +0</p>
+            <button id="summaryContinue" class="btn">Continue</button>
+        </div>
+
+        <div id="endPanel">
+            <h2>Fishing Trip Complete</h2>
+            <p id="endTotalCoins">Total coins: 0</p>
+            <button id="endRestart" class="btn">Play Again</button>
+        </div>
+
+        <div id="catchPopups"></div>
+        <div id="debug"></div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            /*==========================
+              Basic Config & State
+            ==========================*/
+            const GameState = {
+                MENU: 'MENU',
+                DESCENT: 'DESCENT',
+                BOTTOM_PAUSE: 'BOTTOM_PAUSE',
+                ASCENT: 'ASCENT',
+                SUMMARY_ANIM: 'SUMMARY_ANIM',
+                ROUND_SUMMARY: 'ROUND_SUMMARY',
+                END: 'END'
+            };
+
+            const cfg = {
+                initialCoins: 100,
+                initialMaxFish: 6,
+                initialMaxDepth: 5,
+                maxRounds: 3,
+                gaugePeriod: 2.0,
+                descentSpeed: 5,
+                ascentSpeed: 5,
+                ascentSpeedFull: 10,
+                hookCatchRadius: 0.7,
+                worldXLimit: 5,
+                camZ: 15,
+                camDefaultY: 2,
+                fovNear: 45,
+                fovFar: 50
+            };
+
+            const fishUpgradeTiers = [
+                { from: 6, to: 7, cost: 50 },
+                { from: 7, to: 8, cost: 100 },
+                { from: 8, to: 9, cost: 200 },
+                { from: 9, to: 10, cost: 400 }
+            ];
+            const depthUpgradeTiers = [
+                { from: 5, to: 10, cost: 50 },
+                { from: 10, to: 15, cost: 75 },
+                { from: 15, to: 20, cost: 150 },
+                { from: 20, to: 30, cost: 300 }
+            ];
+
+            const player = {
+                coins: cfg.initialCoins,
+                maxFish: cfg.initialMaxFish,
+                maxDepth: cfg.initialMaxDepth,
+                round: 1
+            };
+
+            const roundState = {
+                targetDepth: 0,
+                targetY: 0,
+                caughtFishCount: 0,
+                caughtFishList: [],
+                totalRoundCoins: 0,
+                bottomPauseTimer: 0,
+                bottomPauseDuration: 0,
+                summaryTimer: 0,
+                summaryDone: false
+            };
+
+            let state = GameState.MENU;
+            let gaugeTime = 0;
+            let gaugeActive = true;
+
+            /*==========================
+              Three.js Setup
+            ==========================*/
+            const canvas = document.getElementById('gameCanvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio || 1);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x02111f);
+
+            const camera = new THREE.PerspectiveCamera(cfg.fovFar, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, cfg.camDefaultY, cfg.camZ);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(5, 10, 5);
+            scene.add(dirLight);
+
+            // Water plane
+            const waterGeo = new THREE.PlaneGeometry(40, 40, 1, 1);
+            const waterMat = new THREE.MeshPhongMaterial({ color: 0x0b3d91, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+            const water = new THREE.Mesh(waterGeo, waterMat);
+            water.rotation.x = -Math.PI / 2;
+            water.position.y = 0;
+            scene.add(water);
+
+            // Simple background "depth" gradient (big plane behind)
+            const bgGeo = new THREE.PlaneGeometry(40, 60, 1, 1);
+            const bgMat = new THREE.MeshBasicMaterial({ color: 0x000814 });
+            const bg = new THREE.Mesh(bgGeo, bgMat);
+            bg.position.set(0, -15, -5);
+            scene.add(bg);
+
+            // Fisherman + boat
+            const fishermanGroup = new THREE.Group();
+            scene.add(fishermanGroup);
+            const boatGeo = new THREE.BoxGeometry(6, 0.4, 1.2);
+            const boatMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
+            const boat = new THREE.Mesh(boatGeo, boatMat);
+            boat.position.set(0, 0.2, 0);
+            fishermanGroup.add(boat);
+
+            const bodyGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.8, 12);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x455a64 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.set(0, 0.9, 0);
+            fishermanGroup.add(body);
+
+            const headGeo = new THREE.SphereGeometry(0.25, 16, 16);
+            const headMat = new THREE.MeshPhongMaterial({ color: 0xffe0b2 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.set(0, 1.5, 0);
+            fishermanGroup.add(head);
+
+            fishermanGroup.position.set(0, 0, 0);
+
+            // Hook group
+            const hookGroup = new THREE.Group();
+            scene.add(hookGroup);
+            const hookGeo = new THREE.ConeGeometry(0.1, 0.4, 8);
+            const hookMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const hookMesh = new THREE.Mesh(hookGeo, hookMat);
+            hookMesh.rotation.x = Math.PI;
+            hookGroup.add(hookMesh);
+
+            const catchGroup = new THREE.Group();
+            hookGroup.add(catchGroup);
+
+            let hookX = 0, hookY = 0;
+            hookGroup.position.set(hookX, hookY, 0);
+
+            // Line (simple)
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)]);
+            const line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+
+            /*==========================
+              Fish Manager
+            ==========================*/
+            const fishGroup = new THREE.Group();
+            scene.add(fishGroup);
+            let fishIdCounter = 1;
+            const fishes = []; // {id,mesh,value,rarity,depth,caught,phase,speed}
+
+            function resetFish() {
+                for (const f of fishes) {
+                    fishGroup.remove(f.mesh);
+                }
+                fishes.length = 0;
+            }
+
+            function rarityForDepth(d) {
+                if (d < 10) {
+                    const r = Math.random();
+                    if (r < 0.8) return 'COMMON';
+                    if (r < 0.95) return 'RARE';
+                    if (r < 0.99) return 'AMAZING';
+                    return 'LEGENDARY';
+                } else if (d < 20) {
+                    const r = Math.random();
+                    if (r < 0.6) return 'COMMON';
+                    if (r < 0.85) return 'RARE';
+                    if (r < 0.97) return 'AMAZING';
+                    return 'LEGENDARY';
+                } else {
+                    const r = Math.random();
+                    if (r < 0.4) return 'COMMON';
+                    if (r < 0.7) return 'RARE';
+                    if (r < 0.9) return 'AMAZING';
+                    return 'LEGENDARY';
+                }
+            }
+
+            function valueForRarity(r) {
+                switch (r) {
+                    case 'COMMON': return 5 + Math.floor(Math.random() * 6);      // 5-10
+                    case 'RARE': return 15 + Math.floor(Math.random() * 11);      // 15-25
+                    case 'AMAZING': return 30 + Math.floor(Math.random() * 11);   // 30-40
+                    case 'LEGENDARY': return 50 + Math.floor(Math.random() * 31); // 50-80
+                }
+            }
+
+            function colorForRarity(r) {
+                switch (r) {
+                    case 'COMMON': return 0x90caf9;
+                    case 'RARE': return 0x64b5f6;
+                    case 'AMAZING': return 0xba68c8;
+                    case 'LEGENDARY': return 0xffeb3b;
+                }
+            }
+
+            function spawnFishForRound(maxDepth) {
+                resetFish();
+                const count = Math.round(18 + maxDepth * 0.8); // 20-40 roughly
+                for (let i = 0; i < count; i++) {
+                    const d = 2 + Math.random() * (maxDepth - 2);
+                    const y = -d;
+                    const x = (Math.random() * 2 - 1) * cfg.worldXLimit;
+                    const rarity = rarityForDepth(d);
+                    const val = valueForRarity(rarity);
+                    const geo = new THREE.SphereGeometry(0.25, 10, 10);
+                    const mat = new THREE.MeshPhongMaterial({ color: colorForRarity(rarity) });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set(x, y, 0);
+                    fishGroup.add(mesh);
+                    fishes.push({
+                        id: fishIdCounter++,
+                        mesh,
+                        value: val,
+                        rarity,
+                        depth: d,
+                        caught: false,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.5 + Math.random() * 0.7
+                    });
+                }
+            }
+
+            function updateFish(dt) {
+                for (const f of fishes) {
+                    if (f.caught) continue;
+                    f.phase += dt * f.speed;
+                    const offset = Math.sin(f.phase) * 0.6;
+                    f.mesh.position.x = Math.max(-cfg.worldXLimit, Math.min(cfg.worldXLimit, f.mesh.position.x + offset * dt));
+                }
+            }
+
+            function checkFishCollisions() {
+                const hx = hookX, hy = hookY;
+                let newly = [];
+                for (const f of fishes) {
+                    if (f.caught) continue;
+                    const fx = f.mesh.position.x, fy = f.mesh.position.y;
+                    const dx = fx - hx, dy = fy - hy;
+                    if (dx * dx + dy * dy <= cfg.hookCatchRadius * cfg.hookCatchRadius) {
+                        f.caught = true;
+                        // Attach to hook
+                        const local = new THREE.Vector3(fx, fy, 0).sub(hookGroup.position);
+                        f.mesh.position.copy(local);
+                        catchGroup.add(f.mesh);
+                        roundState.caughtFishCount++;
+                        roundState.caughtFishList.push(f);
+                        playSound('catch', 0.8, 0.95 + Math.random() * 0.1);
+                        const rarityLabel = (f.rarity === 'COMMON') ? '' : (f.rarity === 'RARE' ? 'RARE!' : (f.rarity === 'AMAZING' ? 'AMAZING!' : 'LEGENDARY!'));
+                        showCatchPopup(f.value, rarityLabel, f.rarity);
+                        newly.push(f);
+                        if (roundState.caughtFishCount >= player.maxFish) break;
+                    }
+                }
+                return newly;
+            }
+
+            /*==========================
+              Audio Manager
+            ==========================*/
+            let audioCtx = null;
+            const audioBuffers = {};
+            let bgSource = null;
+            let audioReady = false;
+            const soundPaths = {
+                background: '../assets/sounds/background_music.mp3',
+                catch: '../assets/sounds/catch.mp3',
+                ui: '../assets/sounds/rob_use.mp3'
+            };
+
+            function initAudioContext() {
+                if (audioCtx) return;
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    audioCtx = null;
+                    return;
+                }
+                loadSound('background', soundPaths.background);
+                loadSound('catch', soundPaths.catch);
+                loadSound('ui', soundPaths.ui);
+            }
+
+            function loadSound(name, url) {
+                fetch(url).then(r => r.arrayBuffer()).then(buf => {
+                    if (!audioCtx) return;
+                    audioCtx.decodeAudioData(buf, decoded => {
+                        audioBuffers[name] = decoded;
+                        if (name === 'background') startBackgroundMusic();
+                    });
+                }).catch(() => { });
+            }
+
+            function playSound(name, volume = 1, rate = 1) {
+                if (!audioCtx || !audioBuffers[name]) return;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const src = audioCtx.createBufferSource();
+                src.buffer = audioBuffers[name];
+                const gain = audioCtx.createGain();
+                gain.gain.value = volume;
+                src.playbackRate.value = rate;
+                src.connect(gain).connect(audioCtx.destination);
+                src.start(0);
+            }
+
+            function startBackgroundMusic() {
+                if (!audioCtx || !audioBuffers.background || bgSource) return;
+                bgSource = audioCtx.createBufferSource();
+                bgSource.buffer = audioBuffers.background;
+                bgSource.loop = true;
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.5;
+                bgSource.connect(gain).connect(audioCtx.destination);
+                bgSource.start(0);
+            }
+
+            function ensureAudioStarted() {
+                if (!audioCtx) {
+                    initAudioContext();
+                } else if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+
+            /*==========================
+              UI Manager
+            ==========================*/
+            const coinCounterEl = document.getElementById('coinCounter');
+            const coinValueEl = document.getElementById('coinValue');
+            const fishCounterEl = document.getElementById('fishCounter');
+            const fishValueEl = document.getElementById('fishValue');
+            const fishFillInner = document.getElementById('fishFillInner');
+            const playButton = document.getElementById('playButton');
+            const playLabel = document.getElementById('playLabel');
+            const gaugeEl = document.getElementById('gauge');
+            const gaugePointer = document.getElementById('gaugePointer');
+            const tutorialText = document.getElementById('tutorialText');
+            const menuPanel = document.getElementById('menuPanel');
+            const summaryPanel = document.getElementById('summaryPanel');
+            const summaryFishText = document.getElementById('summaryFishText');
+            const summaryTotalText = document.getElementById('summaryTotalText');
+            const summaryContinue = document.getElementById('summaryContinue');
+            const endPanel = document.getElementById('endPanel');
+            const endTotalCoins = document.getElementById('endTotalCoins');
+            const endRestart = document.getElementById('endRestart');
+            const catchPopups = document.getElementById('catchPopups');
+            const debugEl = document.getElementById('debug');
+
+            const upgradeMaxFishButton = document.getElementById('upgradeMaxFishButton');
+            const upgradeMaxDepthButton = document.getElementById('upgradeMaxDepthButton');
+            const fishUpgradeInfo = document.getElementById('fishUpgradeInfo');
+            const fishUpgradeCost = document.getElementById('fishUpgradeCost');
+            const depthUpgradeInfo = document.getElementById('depthUpgradeInfo');
+            const depthUpgradeCost = document.getElementById('depthUpgradeCost');
+
+            function updateCoinCounter() {
+                coinValueEl.textContent = player.coins.toString();
+            }
+
+            function showCoinCounter() {
+                coinCounterEl.style.opacity = '1';
+            }
+            function hideCoinCounter() {
+                coinCounterEl.style.opacity = '0';
+            }
+            function showFishCounter() {
+                fishCounterEl.style.opacity = '1';
+            }
+            function hideFishCounter() {
+                fishCounterEl.style.opacity = '0';
+            }
+
+            function updateFishCounter() {
+                fishValueEl.textContent = roundState.caughtFishCount + '/' + player.maxFish;
+                const fillPercent = roundState.caughtFishCount / player.maxFish * 100;
+                fishFillInner.style.width = fillPercent + '%';
+            }
+
+            function setGaugePointer(t) {
+                const w = gaugeEl.clientWidth || 220;
+                const x = t * w;
+                gaugePointer.style.left = (x - 2) + 'px';
+            }
+
+            function showTutorial(show) {
+                tutorialText.style.opacity = show ? '1' : '0';
+            }
+
+            function showMenuPanel(show) {
+                menuPanel.style.opacity = show ? '1' : '0';
+                menuPanel.style.pointerEvents = show ? 'auto' : 'none';
+            }
+
+            function showSummaryPanel(show) {
+                summaryPanel.style.opacity = show ? '1' : '0';
+                summaryPanel.style.pointerEvents = show ? 'auto' : 'none';
+            }
+
+            function showEndPanel(show) {
+                endPanel.style.opacity = show ? '1' : '0';
+                endPanel.style.pointerEvents = show ? 'auto' : 'none';
+            }
+
+            function updateUpgradeButtons() {
+                // Max fish
+                let fishTier = fishUpgradeTiers.find(t => t.from === player.maxFish);
+                if (!fishTier) {
+                    upgradeMaxFishButton.disabled = true;
+                    fishUpgradeInfo.textContent = player.maxFish + ' (max)';
+                    fishUpgradeCost.textContent = 'Maxed';
+                } else {
+                    fishUpgradeInfo.textContent = fishTier.from + ' → ' + fishTier.to;
+                    fishUpgradeCost.textContent = 'Cost: ' + fishTier.cost;
+                    upgradeMaxFishButton.disabled = player.coins < fishTier.cost;
+                }
+                // Max depth
+                let depthTier = depthUpgradeTiers.find(t => t.from === player.maxDepth);
+                if (!depthTier) {
+                    upgradeMaxDepthButton.disabled = true;
+                    depthUpgradeInfo.textContent = player.maxDepth + 'm (max)';
+                    depthUpgradeCost.textContent = 'Maxed';
+                } else {
+                    depthUpgradeInfo.textContent = depthTier.from + 'm → ' + depthTier.to + 'm';
+                    depthUpgradeCost.textContent = 'Cost: ' + depthTier.cost;
+                    upgradeMaxDepthButton.disabled = player.coins < depthTier.cost;
+                }
+            }
+
+            function showCatchPopup(value, rarityLabel, rarity) {
+                // screen center-ish; we don't project hook to screen to keep it simple
+                const x = window.innerWidth * 0.5 + (Math.random() * 60 - 30);
+                const y = window.innerHeight * 0.45 + (Math.random() * 40 - 20);
+                const container = document.createElement('div');
+                container.className = 'catch-popup';
+                const raritySpan = document.createElement('div');
+                if (rarityLabel) {
+                    raritySpan.textContent = rarityLabel;
+                    raritySpan.className = 'rarity-' + rarity.toLowerCase();
+                    container.appendChild(raritySpan);
+                }
+                const amountSpan = document.createElement('div');
+                amountSpan.textContent = '+' + value;
+                amountSpan.className = 'amount-label';
+                container.appendChild(amountSpan);
+                catchPopups.appendChild(container);
+                container.style.left = x + 'px';
+                container.style.top = y + 'px';
+                container.style.opacity = '1';
+                container.style.transform = 'translate(-50%,0) scale(0.8)';
+                const start = performance.now();
+                const duration = 800;
+                function anim(now) {
+                    const t = (now - start) / duration;
+                    if (t >= 1) {
+                        catchPopups.removeChild(container);
+                        return;
+                    }
+                    let scale = 0.8 + 0.4 * Math.min(t * 2, 1);
+                    let alpha = 1;
+                    if (t > 0.4) alpha = 1 - (t - 0.4) / 0.6;
+                    const dy = -40 * t;
+                    container.style.transform = 'translate(-50%,' + dy + 'px) scale(' + scale + ')';
+                    container.style.opacity = alpha.toString();
+                    requestAnimationFrame(anim);
+                }
+                requestAnimationFrame(anim);
+            }
+
+            /*==========================
+              Camera Controller
+            ==========================*/
+            function updateCamera(dt) {
+                if (state === GameState.DESCENT || state === GameState.ASCENT || state === GameState.BOTTOM_PAUSE) {
+                    const targetY = hookY + 2;
+                    camera.position.y += (targetY - camera.position.y) * 0.1;
+                    let targetX = 0;
+                    if (state === GameState.ASCENT) targetX = hookX * 0.3;
+                    camera.position.x += (targetX - camera.position.x) * 0.1;
+                    const depthFraction = Math.min(Math.abs(hookY) / player.maxDepth, 1);
+                    const targetFov = cfg.fovFar - (cfg.fovFar - cfg.fovNear) * depthFraction;
+                    camera.fov += (targetFov - camera.fov) * 0.1;
+                    camera.updateProjectionMatrix();
+                } else {
+                    const targetX = 0, targetY = cfg.camDefaultY, targetFov = cfg.fovFar;
+                    camera.position.x += (targetX - camera.position.x) * 0.1;
+                    camera.position.y += (targetY - camera.position.y) * 0.1;
+                    camera.fov += (targetFov - camera.fov) * 0.1;
+                    camera.updateProjectionMatrix();
+                }
+            }
+
+            /*==========================
+              Hook Controller
+            ==========================*/
+            let descentTime = 0, descentDuration = 1;
+            let ascentSpeed = cfg.ascentSpeed;
+            let ascentDone = false;
+            let fishCounterSwapped = false;
+
+            function resetHook() {
+                hookX = 0; hookY = 0;
+                hookGroup.position.set(hookX, hookY, 0);
+                catchGroup.position.set(0, 0, 0);
+                while (catchGroup.children.length > 0) {
+                    const c = catchGroup.children[0];
+                    catchGroup.remove(c);
+                    fishGroup.add(c);
+                }
+            }
+
+            function startDescent(targetY) {
+                descentTime = 0;
+                descentDuration = Math.abs(targetY) / cfg.descentSpeed;
+            }
+
+            function updateDescent(dt) {
+                descentTime += dt;
+                const t = Math.min(descentTime / descentDuration, 1);
+                hookY = 0 + (roundState.targetY - 0) * t;
+                hookGroup.position.y = hookY;
+                // line update
+                updateLine();
+                if (t >= 1 - 1e-3) {
+                    state = GameState.BOTTOM_PAUSE;
+                    roundState.bottomPauseTimer = 0;
+                    roundState.bottomPauseDuration = (player.round === 1) ? 2.0 : (0.5 + Math.random() * 0.5);
+                    if (player.round === 1) showTutorial(true);
+                }
+            }
+
+            function startAscent() {
+                ascentSpeed = cfg.ascentSpeed;
+                ascentDone = false;
+                fishCounterSwapped = false;
+            }
+
+            function updateAscent(dt) {
+                if (ascentDone) return;
+                if (roundState.caughtFishCount >= player.maxFish) ascentSpeed = cfg.ascentSpeedFull;
+                hookY += ascentSpeed * dt;
+                if (hookY >= 0) {
+                    hookY = 0;
+                    ascentDone = true;
+                    state = GameState.SUMMARY_ANIM;
+                    hideFishCounter();
+                    showCoinCounter();
+                    beginSummaryAnim();
+                }
+                hookGroup.position.y = hookY;
+                updateLine();
+                // swap counters near surface
+                if (!fishCounterSwapped && hookY >= -0.5) {
+                    fishCounterSwapped = true;
+                    hideFishCounter();
+                    showCoinCounter();
+                }
+            }
+
+            function updateLine() {
+                const positions = lineGeo.attributes.position.array;
+                // from fisherman (approx head) to hook
+                positions[0] = 0; positions[1] = 1.4; positions[2] = 0;
+                positions[3] = hookGroup.position.x; positions[4] = hookGroup.position.y; positions[5] = hookGroup.position.z;
+                lineGeo.attributes.position.needsUpdate = true;
+            }
+
+            /*==========================
+              Summary Animation
+            ==========================*/
+            let summaryAnimStart = 0;
+            let summaryAnimDuration = 0;
+            let summaryAnimating = false;
+
+            function beginSummaryAnim() {
+                summaryAnimating = true;
+                summaryAnimStart = performance.now();
+                const perFish = 350;
+                summaryAnimDuration = roundState.caughtFishList.length * perFish + 600;
+                // compute total
+                let total = 0;
+                for (const f of roundState.caughtFishList) total += f.value;
+                roundState.totalRoundCoins = total;
+                // animate fish jumping near boat
+                const baseX = -1.5;
+                const baseY = 0.4;
+                roundState.caughtFishList.forEach((f, idx) => {
+                    const mesh = f.mesh;
+                    catchGroup.remove(mesh);
+                    mesh.position.set(baseX + idx * 0.3, baseY, 0);
+                    fishermanGroup.add(mesh);
+                    const start = summaryAnimStart + idx * perFish * 0.5;
+                    const dur = 500;
+                    (function animateFishJump(m, s, d) {
+                        function step(now) {
+                            const t = (now - s) / d;
+                            if (t >= 1) return;
+                            const up = Math.sin(Math.PI * Math.min(t, 1)) * 0.8;
+                            m.position.y = baseY + up;
+                            requestAnimationFrame(step);
+                        }
+                        requestAnimationFrame(step);
+                    })(mesh, start, dur);
+                    // coin burst popup near top
+                    setTimeout(() => {
+                        showCatchPopup(f.value, (f.rarity === 'COMMON') ? '' : (f.rarity === 'RARE' ? 'RARE!' : (f.rarity === 'AMAZING' ? 'AMAZING!' : 'LEGENDARY!')), f.rarity);
+                        playSound('catch', 0.7, 1);
+                    }, idx * perFish * 0.5 + 200);
+                });
+            }
+
+            function updateSummaryAnim(now) {
+                if (!summaryAnimating) return;
+                const elapsed = now - summaryAnimStart;
+                if (elapsed >= summaryAnimDuration) {
+                    summaryAnimating = false;
+                    state = GameState.ROUND_SUMMARY;
+                    showRoundSummary();
+                }
+            }
+
+            function showRoundSummary() {
+                const fishCount = roundState.caughtFishList.length;
+                summaryFishText.textContent = fishCount + ' fish caught';
+                summaryTotalText.textContent = 'Total: +0';
+                showSummaryPanel(true);
+                // animate counter
+                const target = roundState.totalRoundCoins;
+                const start = performance.now();
+                const duration = 800;
+                function animateCounter(now) {
+                    const t = Math.min((now - start) / duration, 1);
+                    const val = Math.round(target * t);
+                    summaryTotalText.textContent = 'Total: +' + val;
+                    if (t < 1) requestAnimationFrame(animateCounter);
+                    else {
+                        // coin fly animation (simplified)
+                        player.coins += target;
+                        updateCoinCounter();
+                        updateUpgradeButtons();
+                    }
+                }
+                requestAnimationFrame(animateCounter);
+            }
+
+            /*==========================
+              Game Flow / State
+            ==========================*/
+            function resetRoundState() {
+                roundState.targetDepth = 0;
+                roundState.targetY = 0;
+                roundState.caughtFishCount = 0;
+                roundState.caughtFishList.length = 0;
+                roundState.totalRoundCoins = 0;
+                roundState.bottomPauseTimer = 0;
+                roundState.bottomPauseDuration = 0;
+                roundState.summaryTimer = 0;
+                roundState.summaryDone = false;
+                updateFishCounter();
+            }
+
+            function startNewRoundWithDepth(selectedDepth) {
+                resetRoundState();
+                roundState.targetDepth = selectedDepth;
+                roundState.targetY = -selectedDepth;
+                hideCoinCounter();
+                showFishCounter();
+                resetHook();
+                spawnFishForRound(player.maxDepth);
+                startDescent(roundState.targetY);
+                state = GameState.DESCENT;
+            }
+
+            function goToMenu() {
+                state = GameState.MENU;
+                resetHook();
+                resetFish();
+                showMenuPanel(true);
+                showCoinCounter();
+                hideFishCounter();
+                showSummaryPanel(false);
+                showEndPanel(false);
+                playLabel.textContent = 'Cast Line';
+                gaugeActive = true;
+                gaugeTime = 0;
+            }
+
+            function goToEnd() {
+                state = GameState.END;
+                showMenuPanel(false);
+                showSummaryPanel(false);
+                showEndPanel(true);
+                endTotalCoins.textContent = 'Total coins: ' + player.coins;
+            }
+
+            /*==========================
+              Input Handling
+            ==========================*/
+            let isDragging = false;
+            let dragActive = false;
+
+            function screenToWorldX(clientX) {
+                const nx = (clientX / window.innerWidth) * 2 - 1;
+                return Math.max(-cfg.worldXLimit, Math.min(cfg.worldXLimit, nx * cfg.worldXLimit));
+            }
+
+            function onPointerDown(e) {
+                ensureAudioStarted();
+                if (state === GameState.MENU) {
+                    // clicking play handled by button onclick
+                }
+                if (state === GameState.ASCENT) {
+                    dragActive = true;
+                }
+            }
+            function onPointerUp() {
+                dragActive = false;
+            }
+            function onPointerMove(e) {
+                if (!dragActive || state !== GameState.ASCENT) return;
+                const clientX = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+                const targetX = screenToWorldX(clientX);
+                hookX += (targetX - hookX) * 0.3;
+                hookGroup.position.x = hookX;
+                updateLine();
+            }
+
+            window.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mouseup', onPointerUp);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('touchstart', onPointerDown, { passive: true });
+            window.addEventListener('touchend', onPointerUp, { passive: true });
+            window.addEventListener('touchmove', onPointerMove, { passive: true });
+
+            playButton.addEventListener('click', function () {
+                ensureAudioStarted();
+                playSound('ui', 0.8, 1);
+                if (state === GameState.MENU) {
+                    // stop gauge, compute depth
+                    const t = getGaugeValue();
+                    // Transform: middle (0.5) = best (1.0), edges (0/1) = worst (0.0)
+                    const quality = 1 - 2 * Math.abs(t - 0.5);
+                    const depthMin = Math.max(1, player.maxDepth - 2);
+                    const depthMax = player.maxDepth;
+                    const selectedDepth = 1.2 * (depthMin + quality * (depthMax - depthMin));
+                    showMenuPanel(false);
+                    startNewRoundWithDepth(selectedDepth);
+                } else if (state === GameState.ROUND_SUMMARY) {
+                    // continue
+                }
+            });
+
+            summaryContinue.addEventListener('click', function () {
+                ensureAudioStarted();
+                playSound('ui', 0.8, 1);
+                showSummaryPanel(false);
+                player.round++;
+                if (player.round > cfg.maxRounds) {
+                    goToEnd();
+                } else {
+                    goToMenu();
+                }
+            });
+
+            endRestart.addEventListener('click', function () {
+                ensureAudioStarted();
+                playSound('ui', 0.8, 1);
+                player.coins = cfg.initialCoins;
+                player.maxFish = cfg.initialMaxFish;
+                player.maxDepth = cfg.initialMaxDepth;
+                player.round = 1;
+                updateCoinCounter();
+                updateUpgradeButtons();
+                goToMenu();
+            });
+
+            upgradeMaxFishButton.addEventListener('click', function () {
+                ensureAudioStarted();
+                let tier = fishUpgradeTiers.find(t => t.from === player.maxFish);
+                if (!tier) return;
+                if (player.coins < tier.cost) return;
+                player.coins -= tier.cost;
+                player.maxFish = tier.to;
+                updateCoinCounter();
+                updateUpgradeButtons();
+                playSound('ui', 0.7, 1);
+            });
+
+            upgradeMaxDepthButton.addEventListener('click', function () {
+                ensureAudioStarted();
+                let tier = depthUpgradeTiers.find(t => t.from === player.maxDepth);
+                if (!tier) return;
+                if (player.coins < tier.cost) return;
+                player.coins -= tier.cost;
+                player.maxDepth = tier.to;
+                updateCoinCounter();
+                updateUpgradeButtons();
+                playSound('ui', 0.7, 1);
+            });
+
+            /*==========================
+              Gauge Logic
+            ==========================*/
+            function getGaugeValue() {
+                const period = cfg.gaugePeriod;
+                const phase = (gaugeTime % period) / period; // 0..1
+                let t = phase < 0.5 ? phase * 2 : (1 - (phase - 0.5) * 2); // 0->1->0
+                // ease in/out sine
+                t = 0.5 - 0.5 * Math.cos(t * Math.PI);
+                return Math.max(0, Math.min(1, t));
+            }
+
+            /*==========================
+              Main Loop
+            ==========================*/
+            let lastTime = performance.now();
+
+            function loop(now) {
+                const dt = (now - lastTime) / 1000;
+                lastTime = now;
+
+                // gauge
+                if (state === GameState.MENU && gaugeActive) {
+                    gaugeTime += dt;
+                    setGaugePointer(getGaugeValue());
+                }
+
+                switch (state) {
+                    case GameState.DESCENT:
+                        updateDescent(dt);
+                        break;
+                    case GameState.BOTTOM_PAUSE:
+                        roundState.bottomPauseTimer += dt;
+                        if (roundState.bottomPauseTimer >= roundState.bottomPauseDuration) {
+                            showTutorial(false);
+                            state = GameState.ASCENT;
+                            startAscent();
+                        }
+                        break;
+                    case GameState.ASCENT:
+                        updateAscent(dt);
+                        if (roundState.caughtFishCount < player.maxFish) {
+                            checkFishCollisions();
+                        }
+                        break;
+                    case GameState.SUMMARY_ANIM:
+                        updateSummaryAnim(now);
+                        break;
+                    default:
+                        break;
+                }
+
+                updateFish(dt);
+                updateCamera(dt);
+
+                renderer.render(scene, camera);
+
+                // debug
+                // debugEl.textContent='State: '+state+'\nRound: '+player.round+'\nDepth: '+(-hookY).toFixed(1)+'m';
+
+                requestAnimationFrame(loop);
+            }
+
+            /*==========================
+              Init
+            ==========================*/
+            function onResize() {
+                const w = window.innerWidth, h = window.innerHeight;
+                renderer.setSize(w, h);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+            }
+            window.addEventListener('resize', onResize);
+
+            updateCoinCounter();
+            updateUpgradeButtons();
+            showCoinCounter();
+            showFishCounter(); // will be hidden in menu
+            fishCounterEl.style.opacity = '0';
+            showMenuPanel(true);
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+
+</html>
+```
