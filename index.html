@@ -1,1285 +1,987 @@
-```html
 <!DOCTYPE html>
+
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <title>Fishing In The Deep</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #02111f;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            color: #fff;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banana Dash 3D 🍌</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; overflow:hidden; font-family:'Press Start 2P',monospace; }
+  #c { display:block; width:100vw; height:100vh; }
 
-        #gameCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: block;
-            background: #02111f;
-        }
+#ui {
+position:fixed; top:0; left:0; right:0;
+display:flex; justify-content:space-between; align-items:flex-start;
+padding:14px 22px; pointer-events:none; z-index:10;
+}
+.ui-box {
+background:#0009; border:2px solid #ffe94e88;
+border-radius:4px; padding:7px 12px; color:#fff; font-size:8px; line-height:2.2;
+}
+.val { color:#ffe94e; font-size:10px; }
+#hearts { font-size:13px; letter-spacing:2px; }
 
-        #hud {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
+/* Powerup indicators */
+#powerups {
+position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+display:flex; gap:12px; pointer-events:none; z-index:10;
+}
+.pu-pill {
+background:#0009; border:2px solid #fff4; border-radius:20px;
+padding:5px 12px; color:#fff; font-size:8px;
+display:flex; align-items:center; gap:6px;
+transition:opacity 0.3s;
+}
+.pu-pill.active { border-color:#ffe94e; box-shadow:0 0 12px #ffe94e88; }
+.pu-bar { width:50px; height:5px; background:#333; border-radius:3px; overflow:hidden; }
+.pu-fill { height:100%; border-radius:3px; transition:width 0.1s; }
 
-        .hud-panel {
-            position: absolute;
-            pointer-events: auto;
-        }
+/* Overlay */
+#overlay {
+position:fixed; inset:0;
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+background:#000a; z-index:20; gap:18px;
+}
+#overlay.hidden { display:none; }
+.ov-title { color:#ffe94e; font-size:26px; text-shadow:4px 4px #c47800,0 0 30px #ffe94eaa; text-align:center; }
+.ov-sub { color:#fff; font-size:9px; line-height:2.4; text-align:center; }
+.blink { animation:blink 1s step-end infinite; }
+@keyframes blink { 50%{opacity:0;} }
 
-        #coinCounter,
-        #fishCounter {
-            top: 1.5vh;
-            left: 1.5vw;
-            padding: 0.6em 1em;
-            border-radius: 999px;
-            background: rgba(0, 0, 0, 0.45);
-            backdrop-filter: blur(4px);
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5em;
-            transition: opacity 0.2s;
-        }
+/* Screen FX */
+#vignette {
+position:fixed; inset:0; pointer-events:none; z-index:15;
+border-radius:0; opacity:0;
+box-shadow:inset 0 0 120px 60px #ff000088;
+transition:opacity 0.05s;
+}
+#flash {
+position:fixed; inset:0; pointer-events:none; z-index:14;
+background:#fff; opacity:0; transition:opacity 0.08s;
+}
+#goldflash {
+position:fixed; inset:0; pointer-events:none; z-index:14;
+background:#ffe94e; opacity:0; transition:opacity 0.08s;
+}
 
-        #coinCounter span.label,
-        #fishCounter span.label {
-            font-weight: 600;
-        }
+/* Floating text */
+#floattext {
+position:fixed; top:35%; left:50%; transform:translate(-50%,-50%);
+pointer-events:none; z-index:16; text-align:center;
+font-size:22px; color:#ffe94e; text-shadow:3px 3px #c47800;
+opacity:0; transition:opacity 0.2s;
+}
 
-        #coinCounter span.value,
-        #fishCounter span.value {
-            font-variant-numeric: tabular-nums;
-        }
+/* Hints */
+#hints {
+position:fixed; bottom:54px; left:50%; transform:translateX(-50%);
+color:#fff6; font-size:7px; text-align:center; line-height:2;
+pointer-events:none; z-index:10;
+}
 
-        #fishCounter {
-            opacity: 0;
-        }
+/* Combo */
+#combo {
+position:fixed; top:50%; right:24px;
+color:#ffe94e; font-size:11px; text-align:right;
+pointer-events:none; z-index:10; opacity:0;
+text-shadow:2px 2px #c47800;
+transition:opacity 0.3s;
+}
 
-        #fishFillOuter {
-            width: 120px;
-            height: 6px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.12);
-            overflow: hidden;
-        }
+/* Speed meter */
+#speedmeter {
+position:fixed; top:14px; left:50%; transform:translateX(-50%);
+color:#ff6644; font-size:8px; opacity:0; pointer-events:none; z-index:10;
+text-shadow:0 0 10px #ff664488;
+transition:opacity 0.4s;
+}
+</style>
 
-        #fishFillInner {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #4cd964, #ffc800);
-            transition: width 0.1s;
-        }
-
-        #menuPanel {
-            bottom: 4vh;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.2vh;
-            text-align: center;
-        }
-
-        #upgrades {
-            display: flex;
-            gap: 1.2vw;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-bottom: 1.5vh;
-        }
-
-        .upgrade-btn {
-            min-width: 160px;
-            padding: 0.6em 0.9em;
-            border-radius: 0.75em;
-            border: none;
-            cursor: pointer;
-            background: rgba(0, 0, 0, 0.55);
-            color: #fff;
-            font-size: 0.9rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.15em;
-            align-items: flex-start;
-            transition: background 0.15s, transform 0.1s, opacity 0.2s;
-        }
-
-        .upgrade-btn span.title {
-            font-weight: 600;
-        }
-
-        .upgrade-btn span.info {
-            font-size: 0.8rem;
-            opacity: 0.9;
-        }
-
-        .upgrade-btn span.cost {
-            font-size: 0.8rem;
-            color: #ffd96a;
-        }
-
-        .upgrade-btn:disabled {
-            opacity: 0.35;
-            cursor: default;
-        }
-
-        .upgrade-btn:not(:disabled):hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .upgrade-btn:not(:disabled):active {
-            transform: scale(0.97);
-        }
-
-        #playButton {
-            padding: 0.7em 1.6em;
-            border-radius: 999px;
-            border: none;
-            background: linear-gradient(135deg, #26c6da, #42a5f5);
-            color: #fff;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.45em;
-            box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.6);
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-
-        #playButton:active {
-            transform: translateY(1px) scale(0.98);
-            box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.5);
-        }
-
-        #gauge {
-            width: 220px;
-            height: 14px;
-            border-radius: 999px;
-            background: rgba(0, 0, 0, 0.6);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #gaugeFill {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: linear-gradient(to right,
-                    red 0%,
-                    yellow 25%,
-                    green 50%,
-                    yellow 75%,
-                    red 100%);
-            opacity: 0.6;
-        }
-
-        #gaugePointer {
-            position: absolute;
-            top: -3px;
-            width: 4px;
-            height: 20px;
-            border-radius: 999px;
-            background: #fff;
-            box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-        }
-
-        #tutorialText {
-            position: absolute;
-            top: 12vh;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 0.6em 1.2em;
-            border-radius: 999px;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(4px);
-            font-size: 1rem;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s;
-        }
-
-        #summaryPanel,
-        #endPanel {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            min-width: 260px;
-            padding: 1.2em 1.4em;
-            border-radius: 1em;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(6px);
-            text-align: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s;
-        }
-
-        #summaryPanel h2,
-        #endPanel h2 {
-            margin: 0 0 0.4em;
-            font-size: 1.2rem;
-        }
-
-        #summaryPanel p,
-        #endPanel p {
-            margin: 0.15em 0;
-            font-size: 0.9rem;
-        }
-
-        .btn {
-            margin-top: 0.8em;
-            padding: 0.5em 1.2em;
-            border-radius: 999px;
-            border: none;
-            background: linear-gradient(135deg, #26c6da, #42a5f5);
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-
-        .btn:active {
-            transform: translateY(1px) scale(0.98);
-        }
-
-        #catchPopups {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        .catch-popup {
-            position: absolute;
-            font-size: 0.9rem;
-            font-weight: 600;
-            pointer-events: none;
-            white-space: nowrap;
-            text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-            opacity: 0;
-        }
-
-        .rarity-common {
-            color: #e0f7fa;
-        }
-
-        .rarity-rare {
-            color: #64b5f6;
-        }
-
-        .rarity-amazing {
-            color: #ba68c8;
-        }
-
-        .rarity-legendary {
-            color: #ffeb3b;
-        }
-
-        .amount-label {
-            color: #fff;
-        }
-
-        #debug {
-            position: absolute;
-            bottom: 0.5vh;
-            left: 0.5vw;
-            font-size: 0.7rem;
-            opacity: 0.5;
-            pointer-events: none;
-            white-space: pre;
-            display: none;
-        }
-
-        @media (max-width:600px) {
-
-            #coinCounter,
-            #fishCounter {
-                font-size: 0.9rem;
-            }
-
-            #gauge {
-                width: 180px;
-            }
-
-            .upgrade-btn {
-                min-width: 140px;
-                font-size: 0.8rem;
-            }
-        }
-    </style>
 </head>
-
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <div id="hud">
-        <div id="coinCounter" class="hud-panel">
-            <span class="label">Coins:</span><span class="value" id="coinValue">100</span>
-        </div>
-        <div id="fishCounter" class="hud-panel">
-            <span class="label">Fish:</span><span class="value" id="fishValue">0/6</span>
-            <div id="fishFillOuter">
-                <div id="fishFillInner"></div>
-            </div>
-        </div>
-
-        <div id="menuPanel" class="hud-panel">
-            <div id="upgrades">
-                <button id="upgradeMaxFishButton" class="upgrade-btn">
-                    <span class="title">Max Fish</span>
-                    <span class="info" id="fishUpgradeInfo">6 → 7</span>
-                    <span class="cost" id="fishUpgradeCost">Cost: 50</span>
-                </button>
-                <button id="upgradeMaxDepthButton" class="upgrade-btn">
-                    <span class="title">Max Depth</span>
-                    <span class="info" id="depthUpgradeInfo">5m → 10m</span>
-                    <span class="cost" id="depthUpgradeCost">Cost: 50</span>
-                </button>
-            </div>
-            <button id="playButton">
-                <span id="playLabel">Cast Line</span>
-                <div id="gauge">
-                    <div id="gaugeFill"></div>
-                    <div id="gaugePointer"></div>
-                </div>
-            </button>
-        </div>
-
-        <div id="tutorialText">Move the hook to catch fish</div>
-
-        <div id="summaryPanel">
-            <h2>Catch Summary</h2>
-            <p id="summaryFishText">0 fish caught</p>
-            <p id="summaryTotalText">Total: +0</p>
-            <button id="summaryContinue" class="btn">Continue</button>
-        </div>
-
-        <div id="endPanel">
-            <h2>Fishing Trip Complete</h2>
-            <p id="endTotalCoins">Total coins: 0</p>
-            <button id="endRestart" class="btn">Play Again</button>
-        </div>
-
-        <div id="catchPopups"></div>
-        <div id="debug"></div>
-    </div>
-
-    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script>
-        (function () {
-            'use strict';
-
-            /*==========================
-              Basic Config & State
-            ==========================*/
-            const GameState = {
-                MENU: 'MENU',
-                DESCENT: 'DESCENT',
-                BOTTOM_PAUSE: 'BOTTOM_PAUSE',
-                ASCENT: 'ASCENT',
-                SUMMARY_ANIM: 'SUMMARY_ANIM',
-                ROUND_SUMMARY: 'ROUND_SUMMARY',
-                END: 'END'
-            };
-
-            const cfg = {
-                initialCoins: 100,
-                initialMaxFish: 6,
-                initialMaxDepth: 5,
-                maxRounds: 3,
-                gaugePeriod: 2.0,
-                descentSpeed: 5,
-                ascentSpeed: 5,
-                ascentSpeedFull: 10,
-                hookCatchRadius: 0.7,
-                worldXLimit: 5,
-                camZ: 15,
-                camDefaultY: 2,
-                fovNear: 45,
-                fovFar: 50
-            };
-
-            const fishUpgradeTiers = [
-                { from: 6, to: 7, cost: 50 },
-                { from: 7, to: 8, cost: 100 },
-                { from: 8, to: 9, cost: 200 },
-                { from: 9, to: 10, cost: 400 }
-            ];
-            const depthUpgradeTiers = [
-                { from: 5, to: 10, cost: 50 },
-                { from: 10, to: 15, cost: 75 },
-                { from: 15, to: 20, cost: 150 },
-                { from: 20, to: 30, cost: 300 }
-            ];
-
-            const player = {
-                coins: cfg.initialCoins,
-                maxFish: cfg.initialMaxFish,
-                maxDepth: cfg.initialMaxDepth,
-                round: 1
-            };
-
-            const roundState = {
-                targetDepth: 0,
-                targetY: 0,
-                caughtFishCount: 0,
-                caughtFishList: [],
-                totalRoundCoins: 0,
-                bottomPauseTimer: 0,
-                bottomPauseDuration: 0,
-                summaryTimer: 0,
-                summaryDone: false
-            };
-
-            let state = GameState.MENU;
-            let gaugeTime = 0;
-            let gaugeActive = true;
-
-            /*==========================
-              Three.js Setup
-            ==========================*/
-            const canvas = document.getElementById('gameCanvas');
-            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio || 1);
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x02111f);
-
-            const camera = new THREE.PerspectiveCamera(cfg.fovFar, window.innerWidth / window.innerHeight, 0.1, 100);
-            camera.position.set(0, cfg.camDefaultY, cfg.camZ);
-
-            const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(ambient);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            dirLight.position.set(5, 10, 5);
-            scene.add(dirLight);
-
-            // Water plane
-            const waterGeo = new THREE.PlaneGeometry(40, 40, 1, 1);
-            const waterMat = new THREE.MeshPhongMaterial({ color: 0x0b3d91, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
-            const water = new THREE.Mesh(waterGeo, waterMat);
-            water.rotation.x = -Math.PI / 2;
-            water.position.y = 0;
-            scene.add(water);
-
-            // Simple background "depth" gradient (big plane behind)
-            const bgGeo = new THREE.PlaneGeometry(40, 60, 1, 1);
-            const bgMat = new THREE.MeshBasicMaterial({ color: 0x000814 });
-            const bg = new THREE.Mesh(bgGeo, bgMat);
-            bg.position.set(0, -15, -5);
-            scene.add(bg);
-
-            // Fisherman + boat
-            const fishermanGroup = new THREE.Group();
-            scene.add(fishermanGroup);
-            const boatGeo = new THREE.BoxGeometry(6, 0.4, 1.2);
-            const boatMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
-            const boat = new THREE.Mesh(boatGeo, boatMat);
-            boat.position.set(0, 0.2, 0);
-            fishermanGroup.add(boat);
-
-            const bodyGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.8, 12);
-            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x455a64 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.set(0, 0.9, 0);
-            fishermanGroup.add(body);
-
-            const headGeo = new THREE.SphereGeometry(0.25, 16, 16);
-            const headMat = new THREE.MeshPhongMaterial({ color: 0xffe0b2 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.set(0, 1.5, 0);
-            fishermanGroup.add(head);
-
-            fishermanGroup.position.set(0, 0, 0);
-
-            // Hook group
-            const hookGroup = new THREE.Group();
-            scene.add(hookGroup);
-            const hookGeo = new THREE.ConeGeometry(0.1, 0.4, 8);
-            const hookMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            const hookMesh = new THREE.Mesh(hookGeo, hookMat);
-            hookMesh.rotation.x = Math.PI;
-            hookGroup.add(hookMesh);
-
-            const catchGroup = new THREE.Group();
-            hookGroup.add(catchGroup);
-
-            let hookX = 0, hookY = 0;
-            hookGroup.position.set(hookX, hookY, 0);
-
-            // Line (simple)
-            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
-            const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)]);
-            const line = new THREE.Line(lineGeo, lineMat);
-            scene.add(line);
-
-            /*==========================
-              Fish Manager
-            ==========================*/
-            const fishGroup = new THREE.Group();
-            scene.add(fishGroup);
-            let fishIdCounter = 1;
-            const fishes = []; // {id,mesh,value,rarity,depth,caught,phase,speed}
-
-            function resetFish() {
-                for (const f of fishes) {
-                    fishGroup.remove(f.mesh);
-                }
-                fishes.length = 0;
-            }
-
-            function rarityForDepth(d) {
-                if (d < 10) {
-                    const r = Math.random();
-                    if (r < 0.8) return 'COMMON';
-                    if (r < 0.95) return 'RARE';
-                    if (r < 0.99) return 'AMAZING';
-                    return 'LEGENDARY';
-                } else if (d < 20) {
-                    const r = Math.random();
-                    if (r < 0.6) return 'COMMON';
-                    if (r < 0.85) return 'RARE';
-                    if (r < 0.97) return 'AMAZING';
-                    return 'LEGENDARY';
-                } else {
-                    const r = Math.random();
-                    if (r < 0.4) return 'COMMON';
-                    if (r < 0.7) return 'RARE';
-                    if (r < 0.9) return 'AMAZING';
-                    return 'LEGENDARY';
-                }
-            }
-
-            function valueForRarity(r) {
-                switch (r) {
-                    case 'COMMON': return 5 + Math.floor(Math.random() * 6);      // 5-10
-                    case 'RARE': return 15 + Math.floor(Math.random() * 11);      // 15-25
-                    case 'AMAZING': return 30 + Math.floor(Math.random() * 11);   // 30-40
-                    case 'LEGENDARY': return 50 + Math.floor(Math.random() * 31); // 50-80
-                }
-            }
-
-            function colorForRarity(r) {
-                switch (r) {
-                    case 'COMMON': return 0x90caf9;
-                    case 'RARE': return 0x64b5f6;
-                    case 'AMAZING': return 0xba68c8;
-                    case 'LEGENDARY': return 0xffeb3b;
-                }
-            }
-
-            function spawnFishForRound(maxDepth) {
-                resetFish();
-                const count = Math.round(18 + maxDepth * 0.8); // 20-40 roughly
-                for (let i = 0; i < count; i++) {
-                    const d = 2 + Math.random() * (maxDepth - 2);
-                    const y = -d;
-                    const x = (Math.random() * 2 - 1) * cfg.worldXLimit;
-                    const rarity = rarityForDepth(d);
-                    const val = valueForRarity(rarity);
-                    const geo = new THREE.SphereGeometry(0.25, 10, 10);
-                    const mat = new THREE.MeshPhongMaterial({ color: colorForRarity(rarity) });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.set(x, y, 0);
-                    fishGroup.add(mesh);
-                    fishes.push({
-                        id: fishIdCounter++,
-                        mesh,
-                        value: val,
-                        rarity,
-                        depth: d,
-                        caught: false,
-                        phase: Math.random() * Math.PI * 2,
-                        speed: 0.5 + Math.random() * 0.7
-                    });
-                }
-            }
-
-            function updateFish(dt) {
-                for (const f of fishes) {
-                    if (f.caught) continue;
-                    f.phase += dt * f.speed;
-                    const offset = Math.sin(f.phase) * 0.6;
-                    f.mesh.position.x = Math.max(-cfg.worldXLimit, Math.min(cfg.worldXLimit, f.mesh.position.x + offset * dt));
-                }
-            }
-
-            function checkFishCollisions() {
-                const hx = hookX, hy = hookY;
-                let newly = [];
-                for (const f of fishes) {
-                    if (f.caught) continue;
-                    const fx = f.mesh.position.x, fy = f.mesh.position.y;
-                    const dx = fx - hx, dy = fy - hy;
-                    if (dx * dx + dy * dy <= cfg.hookCatchRadius * cfg.hookCatchRadius) {
-                        f.caught = true;
-                        // Attach to hook
-                        const local = new THREE.Vector3(fx, fy, 0).sub(hookGroup.position);
-                        f.mesh.position.copy(local);
-                        catchGroup.add(f.mesh);
-                        roundState.caughtFishCount++;
-                        roundState.caughtFishList.push(f);
-                        playSound('catch', 0.8, 0.95 + Math.random() * 0.1);
-                        const rarityLabel = (f.rarity === 'COMMON') ? '' : (f.rarity === 'RARE' ? 'RARE!' : (f.rarity === 'AMAZING' ? 'AMAZING!' : 'LEGENDARY!'));
-                        showCatchPopup(f.value, rarityLabel, f.rarity);
-                        newly.push(f);
-                        if (roundState.caughtFishCount >= player.maxFish) break;
-                    }
-                }
-                return newly;
-            }
-
-            /*==========================
-              Audio Manager
-            ==========================*/
-            let audioCtx = null;
-            const audioBuffers = {};
-            let bgSource = null;
-            let audioReady = false;
-            const soundPaths = {
-                background: './assets/sounds/background_music.mp3',
-                catch: './assets/sounds/catch.mp3',
-                ui: './assets/sounds/rob_use.mp3'
-            };
-
-            function initAudioContext() {
-                if (audioCtx) return;
-                try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                } catch (e) {
-                    audioCtx = null;
-                    return;
-                }
-                loadSound('background', soundPaths.background);
-                loadSound('catch', soundPaths.catch);
-                loadSound('ui', soundPaths.ui);
-            }
-
-            function loadSound(name, url) {
-                fetch(url).then(r => r.arrayBuffer()).then(buf => {
-                    if (!audioCtx) return;
-                    audioCtx.decodeAudioData(buf, decoded => {
-                        audioBuffers[name] = decoded;
-                        if (name === 'background') startBackgroundMusic();
-                    });
-                }).catch(() => { });
-            }
-
-            function playSound(name, volume = 1, rate = 1) {
-                if (!audioCtx || !audioBuffers[name]) return;
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const src = audioCtx.createBufferSource();
-                src.buffer = audioBuffers[name];
-                const gain = audioCtx.createGain();
-                gain.gain.value = volume;
-                src.playbackRate.value = rate;
-                src.connect(gain).connect(audioCtx.destination);
-                src.start(0);
-            }
-
-            function startBackgroundMusic() {
-                if (!audioCtx || !audioBuffers.background || bgSource) return;
-                bgSource = audioCtx.createBufferSource();
-                bgSource.buffer = audioBuffers.background;
-                bgSource.loop = true;
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.5;
-                bgSource.connect(gain).connect(audioCtx.destination);
-                bgSource.start(0);
-            }
-
-            function ensureAudioStarted() {
-                if (!audioCtx) {
-                    initAudioContext();
-                } else if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-            }
-
-            /*==========================
-              UI Manager
-            ==========================*/
-            const coinCounterEl = document.getElementById('coinCounter');
-            const coinValueEl = document.getElementById('coinValue');
-            const fishCounterEl = document.getElementById('fishCounter');
-            const fishValueEl = document.getElementById('fishValue');
-            const fishFillInner = document.getElementById('fishFillInner');
-            const playButton = document.getElementById('playButton');
-            const playLabel = document.getElementById('playLabel');
-            const gaugeEl = document.getElementById('gauge');
-            const gaugePointer = document.getElementById('gaugePointer');
-            const tutorialText = document.getElementById('tutorialText');
-            const menuPanel = document.getElementById('menuPanel');
-            const summaryPanel = document.getElementById('summaryPanel');
-            const summaryFishText = document.getElementById('summaryFishText');
-            const summaryTotalText = document.getElementById('summaryTotalText');
-            const summaryContinue = document.getElementById('summaryContinue');
-            const endPanel = document.getElementById('endPanel');
-            const endTotalCoins = document.getElementById('endTotalCoins');
-            const endRestart = document.getElementById('endRestart');
-            const catchPopups = document.getElementById('catchPopups');
-            const debugEl = document.getElementById('debug');
-
-            const upgradeMaxFishButton = document.getElementById('upgradeMaxFishButton');
-            const upgradeMaxDepthButton = document.getElementById('upgradeMaxDepthButton');
-            const fishUpgradeInfo = document.getElementById('fishUpgradeInfo');
-            const fishUpgradeCost = document.getElementById('fishUpgradeCost');
-            const depthUpgradeInfo = document.getElementById('depthUpgradeInfo');
-            const depthUpgradeCost = document.getElementById('depthUpgradeCost');
-
-            function updateCoinCounter() {
-                coinValueEl.textContent = player.coins.toString();
-            }
-
-            function showCoinCounter() {
-                coinCounterEl.style.opacity = '1';
-            }
-            function hideCoinCounter() {
-                coinCounterEl.style.opacity = '0';
-            }
-            function showFishCounter() {
-                fishCounterEl.style.opacity = '1';
-            }
-            function hideFishCounter() {
-                fishCounterEl.style.opacity = '0';
-            }
-
-            function updateFishCounter() {
-                fishValueEl.textContent = roundState.caughtFishCount + '/' + player.maxFish;
-                const fillPercent = roundState.caughtFishCount / player.maxFish * 100;
-                fishFillInner.style.width = fillPercent + '%';
-            }
-
-            function setGaugePointer(t) {
-                const w = gaugeEl.clientWidth || 220;
-                const x = t * w;
-                gaugePointer.style.left = (x - 2) + 'px';
-            }
-
-            function showTutorial(show) {
-                tutorialText.style.opacity = show ? '1' : '0';
-            }
-
-            function showMenuPanel(show) {
-                menuPanel.style.opacity = show ? '1' : '0';
-                menuPanel.style.pointerEvents = show ? 'auto' : 'none';
-            }
-
-            function showSummaryPanel(show) {
-                summaryPanel.style.opacity = show ? '1' : '0';
-                summaryPanel.style.pointerEvents = show ? 'auto' : 'none';
-            }
-
-            function showEndPanel(show) {
-                endPanel.style.opacity = show ? '1' : '0';
-                endPanel.style.pointerEvents = show ? 'auto' : 'none';
-            }
-
-            function updateUpgradeButtons() {
-                // Max fish
-                let fishTier = fishUpgradeTiers.find(t => t.from === player.maxFish);
-                if (!fishTier) {
-                    upgradeMaxFishButton.disabled = true;
-                    fishUpgradeInfo.textContent = player.maxFish + ' (max)';
-                    fishUpgradeCost.textContent = 'Maxed';
-                } else {
-                    fishUpgradeInfo.textContent = fishTier.from + ' → ' + fishTier.to;
-                    fishUpgradeCost.textContent = 'Cost: ' + fishTier.cost;
-                    upgradeMaxFishButton.disabled = player.coins < fishTier.cost;
-                }
-                // Max depth
-                let depthTier = depthUpgradeTiers.find(t => t.from === player.maxDepth);
-                if (!depthTier) {
-                    upgradeMaxDepthButton.disabled = true;
-                    depthUpgradeInfo.textContent = player.maxDepth + 'm (max)';
-                    depthUpgradeCost.textContent = 'Maxed';
-                } else {
-                    depthUpgradeInfo.textContent = depthTier.from + 'm → ' + depthTier.to + 'm';
-                    depthUpgradeCost.textContent = 'Cost: ' + depthTier.cost;
-                    upgradeMaxDepthButton.disabled = player.coins < depthTier.cost;
-                }
-            }
-
-            function showCatchPopup(value, rarityLabel, rarity) {
-                // screen center-ish; we don't project hook to screen to keep it simple
-                const x = window.innerWidth * 0.5 + (Math.random() * 60 - 30);
-                const y = window.innerHeight * 0.45 + (Math.random() * 40 - 20);
-                const container = document.createElement('div');
-                container.className = 'catch-popup';
-                const raritySpan = document.createElement('div');
-                if (rarityLabel) {
-                    raritySpan.textContent = rarityLabel;
-                    raritySpan.className = 'rarity-' + rarity.toLowerCase();
-                    container.appendChild(raritySpan);
-                }
-                const amountSpan = document.createElement('div');
-                amountSpan.textContent = '+' + value;
-                amountSpan.className = 'amount-label';
-                container.appendChild(amountSpan);
-                catchPopups.appendChild(container);
-                container.style.left = x + 'px';
-                container.style.top = y + 'px';
-                container.style.opacity = '1';
-                container.style.transform = 'translate(-50%,0) scale(0.8)';
-                const start = performance.now();
-                const duration = 800;
-                function anim(now) {
-                    const t = (now - start) / duration;
-                    if (t >= 1) {
-                        catchPopups.removeChild(container);
-                        return;
-                    }
-                    let scale = 0.8 + 0.4 * Math.min(t * 2, 1);
-                    let alpha = 1;
-                    if (t > 0.4) alpha = 1 - (t - 0.4) / 0.6;
-                    const dy = -40 * t;
-                    container.style.transform = 'translate(-50%,' + dy + 'px) scale(' + scale + ')';
-                    container.style.opacity = alpha.toString();
-                    requestAnimationFrame(anim);
-                }
-                requestAnimationFrame(anim);
-            }
-
-            /*==========================
-              Camera Controller
-            ==========================*/
-            function updateCamera(dt) {
-                if (state === GameState.DESCENT || state === GameState.ASCENT || state === GameState.BOTTOM_PAUSE) {
-                    const targetY = hookY + 2;
-                    camera.position.y += (targetY - camera.position.y) * 0.1;
-                    let targetX = 0;
-                    if (state === GameState.ASCENT) targetX = hookX * 0.3;
-                    camera.position.x += (targetX - camera.position.x) * 0.1;
-                    const depthFraction = Math.min(Math.abs(hookY) / player.maxDepth, 1);
-                    const targetFov = cfg.fovFar - (cfg.fovFar - cfg.fovNear) * depthFraction;
-                    camera.fov += (targetFov - camera.fov) * 0.1;
-                    camera.updateProjectionMatrix();
-                } else {
-                    const targetX = 0, targetY = cfg.camDefaultY, targetFov = cfg.fovFar;
-                    camera.position.x += (targetX - camera.position.x) * 0.1;
-                    camera.position.y += (targetY - camera.position.y) * 0.1;
-                    camera.fov += (targetFov - camera.fov) * 0.1;
-                    camera.updateProjectionMatrix();
-                }
-            }
-
-            /*==========================
-              Hook Controller
-            ==========================*/
-            let descentTime = 0, descentDuration = 1;
-            let ascentSpeed = cfg.ascentSpeed;
-            let ascentDone = false;
-            let fishCounterSwapped = false;
-
-            function resetHook() {
-                hookX = 0; hookY = 0;
-                hookGroup.position.set(hookX, hookY, 0);
-                catchGroup.position.set(0, 0, 0);
-                while (catchGroup.children.length > 0) {
-                    const c = catchGroup.children[0];
-                    catchGroup.remove(c);
-                    fishGroup.add(c);
-                }
-            }
-
-            function startDescent(targetY) {
-                descentTime = 0;
-                descentDuration = Math.abs(targetY) / cfg.descentSpeed;
-            }
-
-            function updateDescent(dt) {
-                descentTime += dt;
-                const t = Math.min(descentTime / descentDuration, 1);
-                hookY = 0 + (roundState.targetY - 0) * t;
-                hookGroup.position.y = hookY;
-                // line update
-                updateLine();
-                if (t >= 1 - 1e-3) {
-                    state = GameState.BOTTOM_PAUSE;
-                    roundState.bottomPauseTimer = 0;
-                    roundState.bottomPauseDuration = (player.round === 1) ? 2.0 : (0.5 + Math.random() * 0.5);
-                    if (player.round === 1) showTutorial(true);
-                }
-            }
-
-            function startAscent() {
-                ascentSpeed = cfg.ascentSpeed;
-                ascentDone = false;
-                fishCounterSwapped = false;
-            }
-
-            function updateAscent(dt) {
-                if (ascentDone) return;
-                if (roundState.caughtFishCount >= player.maxFish) ascentSpeed = cfg.ascentSpeedFull;
-                hookY += ascentSpeed * dt;
-                if (hookY >= 0) {
-                    hookY = 0;
-                    ascentDone = true;
-                    state = GameState.SUMMARY_ANIM;
-                    hideFishCounter();
-                    showCoinCounter();
-                    beginSummaryAnim();
-                }
-                hookGroup.position.y = hookY;
-                updateLine();
-                // swap counters near surface
-                if (!fishCounterSwapped && hookY >= -0.5) {
-                    fishCounterSwapped = true;
-                    hideFishCounter();
-                    showCoinCounter();
-                }
-            }
-
-            function updateLine() {
-                const positions = lineGeo.attributes.position.array;
-                // from fisherman (approx head) to hook
-                positions[0] = 0; positions[1] = 1.4; positions[2] = 0;
-                positions[3] = hookGroup.position.x; positions[4] = hookGroup.position.y; positions[5] = hookGroup.position.z;
-                lineGeo.attributes.position.needsUpdate = true;
-            }
-
-            /*==========================
-              Summary Animation
-            ==========================*/
-            let summaryAnimStart = 0;
-            let summaryAnimDuration = 0;
-            let summaryAnimating = false;
-
-            function beginSummaryAnim() {
-                summaryAnimating = true;
-                summaryAnimStart = performance.now();
-                const perFish = 350;
-                summaryAnimDuration = roundState.caughtFishList.length * perFish + 600;
-                // compute total
-                let total = 0;
-                for (const f of roundState.caughtFishList) total += f.value;
-                roundState.totalRoundCoins = total;
-                // animate fish jumping near boat
-                const baseX = -1.5;
-                const baseY = 0.4;
-                roundState.caughtFishList.forEach((f, idx) => {
-                    const mesh = f.mesh;
-                    catchGroup.remove(mesh);
-                    mesh.position.set(baseX + idx * 0.3, baseY, 0);
-                    fishermanGroup.add(mesh);
-                    const start = summaryAnimStart + idx * perFish * 0.5;
-                    const dur = 500;
-                    (function animateFishJump(m, s, d) {
-                        function step(now) {
-                            const t = (now - s) / d;
-                            if (t >= 1) return;
-                            const up = Math.sin(Math.PI * Math.min(t, 1)) * 0.8;
-                            m.position.y = baseY + up;
-                            requestAnimationFrame(step);
-                        }
-                        requestAnimationFrame(step);
-                    })(mesh, start, dur);
-                    // coin burst popup near top
-                    setTimeout(() => {
-                        showCatchPopup(f.value, (f.rarity === 'COMMON') ? '' : (f.rarity === 'RARE' ? 'RARE!' : (f.rarity === 'AMAZING' ? 'AMAZING!' : 'LEGENDARY!')), f.rarity);
-                        playSound('catch', 0.7, 1);
-                    }, idx * perFish * 0.5 + 200);
-                });
-            }
-
-            function updateSummaryAnim(now) {
-                if (!summaryAnimating) return;
-                const elapsed = now - summaryAnimStart;
-                if (elapsed >= summaryAnimDuration) {
-                    summaryAnimating = false;
-                    state = GameState.ROUND_SUMMARY;
-                    showRoundSummary();
-                }
-            }
-
-            function showRoundSummary() {
-                const fishCount = roundState.caughtFishList.length;
-                summaryFishText.textContent = fishCount + ' fish caught';
-                summaryTotalText.textContent = 'Total: +0';
-                showSummaryPanel(true);
-                // animate counter
-                const target = roundState.totalRoundCoins;
-                const start = performance.now();
-                const duration = 800;
-                function animateCounter(now) {
-                    const t = Math.min((now - start) / duration, 1);
-                    const val = Math.round(target * t);
-                    summaryTotalText.textContent = 'Total: +' + val;
-                    if (t < 1) requestAnimationFrame(animateCounter);
-                    else {
-                        // coin fly animation (simplified)
-                        player.coins += target;
-                        updateCoinCounter();
-                        updateUpgradeButtons();
-                    }
-                }
-                requestAnimationFrame(animateCounter);
-            }
-
-            /*==========================
-              Game Flow / State
-            ==========================*/
-            function resetRoundState() {
-                roundState.targetDepth = 0;
-                roundState.targetY = 0;
-                roundState.caughtFishCount = 0;
-                roundState.caughtFishList.length = 0;
-                roundState.totalRoundCoins = 0;
-                roundState.bottomPauseTimer = 0;
-                roundState.bottomPauseDuration = 0;
-                roundState.summaryTimer = 0;
-                roundState.summaryDone = false;
-                updateFishCounter();
-            }
-
-            function startNewRoundWithDepth(selectedDepth) {
-                resetRoundState();
-                roundState.targetDepth = selectedDepth;
-                roundState.targetY = -selectedDepth;
-                hideCoinCounter();
-                showFishCounter();
-                resetHook();
-                spawnFishForRound(player.maxDepth);
-                startDescent(roundState.targetY);
-                state = GameState.DESCENT;
-            }
-
-            function goToMenu() {
-                state = GameState.MENU;
-                resetHook();
-                resetFish();
-                showMenuPanel(true);
-                showCoinCounter();
-                hideFishCounter();
-                showSummaryPanel(false);
-                showEndPanel(false);
-                playLabel.textContent = 'Cast Line';
-                gaugeActive = true;
-                gaugeTime = 0;
-            }
-
-            function goToEnd() {
-                state = GameState.END;
-                showMenuPanel(false);
-                showSummaryPanel(false);
-                showEndPanel(true);
-                endTotalCoins.textContent = 'Total coins: ' + player.coins;
-            }
-
-            /*==========================
-              Input Handling
-            ==========================*/
-            let isDragging = false;
-            let dragActive = false;
-
-            function screenToWorldX(clientX) {
-                const nx = (clientX / window.innerWidth) * 2 - 1;
-                return Math.max(-cfg.worldXLimit, Math.min(cfg.worldXLimit, nx * cfg.worldXLimit));
-            }
-
-            function onPointerDown(e) {
-                ensureAudioStarted();
-                if (state === GameState.MENU) {
-                    // clicking play handled by button onclick
-                }
-                if (state === GameState.ASCENT) {
-                    dragActive = true;
-                }
-            }
-            function onPointerUp() {
-                dragActive = false;
-            }
-            function onPointerMove(e) {
-                if (!dragActive || state !== GameState.ASCENT) return;
-                const clientX = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
-                const targetX = screenToWorldX(clientX);
-                hookX += (targetX - hookX) * 0.3;
-                hookGroup.position.x = hookX;
-                updateLine();
-            }
-
-            window.addEventListener('mousedown', onPointerDown);
-            window.addEventListener('mouseup', onPointerUp);
-            window.addEventListener('mousemove', onPointerMove);
-            window.addEventListener('touchstart', onPointerDown, { passive: true });
-            window.addEventListener('touchend', onPointerUp, { passive: true });
-            window.addEventListener('touchmove', onPointerMove, { passive: true });
-
-            playButton.addEventListener('click', function () {
-                ensureAudioStarted();
-                playSound('ui', 0.8, 1);
-                if (state === GameState.MENU) {
-                    // stop gauge, compute depth
-                    const t = getGaugeValue();
-                    // Transform: middle (0.5) = best (1.0), edges (0/1) = worst (0.0)
-                    const quality = 1 - 2 * Math.abs(t - 0.5);
-                    const depthMin = Math.max(1, player.maxDepth - 2);
-                    const depthMax = player.maxDepth;
-                    const selectedDepth = 1.2 * (depthMin + quality * (depthMax - depthMin));
-                    showMenuPanel(false);
-                    startNewRoundWithDepth(selectedDepth);
-                } else if (state === GameState.ROUND_SUMMARY) {
-                    // continue
-                }
-            });
-
-            summaryContinue.addEventListener('click', function () {
-                ensureAudioStarted();
-                playSound('ui', 0.8, 1);
-                showSummaryPanel(false);
-                player.round++;
-                if (player.round > cfg.maxRounds) {
-                    goToEnd();
-                } else {
-                    goToMenu();
-                }
-            });
-
-            endRestart.addEventListener('click', function () {
-                ensureAudioStarted();
-                playSound('ui', 0.8, 1);
-                player.coins = cfg.initialCoins;
-                player.maxFish = cfg.initialMaxFish;
-                player.maxDepth = cfg.initialMaxDepth;
-                player.round = 1;
-                updateCoinCounter();
-                updateUpgradeButtons();
-                goToMenu();
-            });
-
-            upgradeMaxFishButton.addEventListener('click', function () {
-                ensureAudioStarted();
-                let tier = fishUpgradeTiers.find(t => t.from === player.maxFish);
-                if (!tier) return;
-                if (player.coins < tier.cost) return;
-                player.coins -= tier.cost;
-                player.maxFish = tier.to;
-                updateCoinCounter();
-                updateUpgradeButtons();
-                playSound('ui', 0.7, 1);
-            });
-
-            upgradeMaxDepthButton.addEventListener('click', function () {
-                ensureAudioStarted();
-                let tier = depthUpgradeTiers.find(t => t.from === player.maxDepth);
-                if (!tier) return;
-                if (player.coins < tier.cost) return;
-                player.coins -= tier.cost;
-                player.maxDepth = tier.to;
-                updateCoinCounter();
-                updateUpgradeButtons();
-                playSound('ui', 0.7, 1);
-            });
-
-            /*==========================
-              Gauge Logic
-            ==========================*/
-            function getGaugeValue() {
-                const period = cfg.gaugePeriod;
-                const phase = (gaugeTime % period) / period; // 0..1
-                let t = phase < 0.5 ? phase * 2 : (1 - (phase - 0.5) * 2); // 0->1->0
-                // ease in/out sine
-                t = 0.5 - 0.5 * Math.cos(t * Math.PI);
-                return Math.max(0, Math.min(1, t));
-            }
-
-            /*==========================
-              Main Loop
-            ==========================*/
-            let lastTime = performance.now();
-
-            function loop(now) {
-                const dt = (now - lastTime) / 1000;
-                lastTime = now;
-
-                // gauge
-                if (state === GameState.MENU && gaugeActive) {
-                    gaugeTime += dt;
-                    setGaugePointer(getGaugeValue());
-                }
-
-                switch (state) {
-                    case GameState.DESCENT:
-                        updateDescent(dt);
-                        break;
-                    case GameState.BOTTOM_PAUSE:
-                        roundState.bottomPauseTimer += dt;
-                        if (roundState.bottomPauseTimer >= roundState.bottomPauseDuration) {
-                            showTutorial(false);
-                            state = GameState.ASCENT;
-                            startAscent();
-                        }
-                        break;
-                    case GameState.ASCENT:
-                        updateAscent(dt);
-                        if (roundState.caughtFishCount < player.maxFish) {
-                            checkFishCollisions();
-                        }
-                        break;
-                    case GameState.SUMMARY_ANIM:
-                        updateSummaryAnim(now);
-                        break;
-                    default:
-                        break;
-                }
-
-                updateFish(dt);
-                updateCamera(dt);
-
-                renderer.render(scene, camera);
-
-                // debug
-                // debugEl.textContent='State: '+state+'\nRound: '+player.round+'\nDepth: '+(-hookY).toFixed(1)+'m';
-
-                requestAnimationFrame(loop);
-            }
-
-            /*==========================
-              Init
-            ==========================*/
-            function onResize() {
-                const w = window.innerWidth, h = window.innerHeight;
-                renderer.setSize(w, h);
-                camera.aspect = w / h;
-                camera.updateProjectionMatrix();
-            }
-            window.addEventListener('resize', onResize);
-
-            updateCoinCounter();
-            updateUpgradeButtons();
-            showCoinCounter();
-            showFishCounter(); // will be hidden in menu
-            fishCounterEl.style.opacity = '0';
-            showMenuPanel(true);
-            requestAnimationFrame(loop);
-        })();
-    </script>
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div class="ui-box">SCORE<br><span class="val" id="scoreDisplay">0</span></div>
+  <div class="ui-box" style="text-align:center;">
+    🍌 <span class="val" id="bananaDisplay">0</span>
+    <br><div id="hearts">❤️❤️❤️</div>
+  </div>
+  <div class="ui-box" style="text-align:right;">BEST<br><span class="val" id="bestDisplay">0</span></div>
+</div>
+
+<div id="speedmeter">⚡ FASTER!</div>
+
+<div id="combo">🍌 x<span id="comboCount">0</span></div>
+
+<div id="powerups">
+  <div class="pu-pill" id="pu-speed">⚡ BOOST <div class="pu-bar"><div class="pu-fill" id="pf-speed" style="background:#ff6644;width:0%"></div></div></div>
+  <div class="pu-pill" id="pu-shield">🛡️ SHIELD <div class="pu-bar"><div class="pu-fill" id="pf-shield" style="background:#44aaff;width:0%"></div></div></div>
+  <div class="pu-pill" id="pu-magnet">🧲 MAGNET <div class="pu-bar"><div class="pu-fill" id="pf-magnet" style="background:#ffe94e;width:0%"></div></div></div>
+</div>
+
+<div id="vignette"></div>
+<div id="flash"></div>
+<div id="goldflash"></div>
+<div id="floattext"></div>
+
+<div id="overlay">
+  <div class="ov-title" id="ovTitle">🍌 BANANA DASH 3D</div>
+  <div class="ov-sub" id="ovSub">
+    ← → / A D — SWITCH LANES<br>
+    SPACE / ↑ — JUMP (DOUBLE JUMP!)<br><br>
+    COLLECT POWERUPS:<br>
+    ⚡ SPEED &nbsp; 🛡️ SHIELD &nbsp; 🧲 MAGNET<br><br>
+    WATCH OUT FOR ENEMIES!<br>
+    3 LIVES — SHIELD SAVES YOU<br><br>
+    <span class="blink">PRESS SPACE OR TAP TO START</span>
+  </div>
+</div>
+
+<div id="hints">← → LANES &nbsp;|&nbsp; SPACE JUMP &nbsp;|&nbsp; DOUBLE JUMP OK</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════
+//  AUDIO
+// ══════════════════════════════════════════
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+function playTone(freq,type,dur,vol=0.22,freqEnd=null){
+  try{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    o.type=type; o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd,audioCtx.currentTime+dur);
+    g.gain.setValueAtTime(vol,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function sfxJump(dbl){ playTone(dbl?300:220,'square',0.12,0.18,dbl?650:440); }
+function sfxBanana(){ playTone(523,'square',0.07,0.18); setTimeout(()=>playTone(784,'square',0.1,0.18),70); }
+function sfxCombo(n){ playTone(400+n*80,'square',0.15,0.25,600+n*100); }
+function sfxHit(){ playTone(220,'sawtooth',0.07,0.28,80); setTimeout(()=>playTone(110,'sawtooth',0.12,0.28),90); }
+function sfxDie(){ [300,200,150,80].forEach((f,i)=>setTimeout(()=>playTone(f,'sawtooth',0.15,0.28),i*80)); }
+function sfxStart(){ [261,329,392,523].forEach((f,i)=>setTimeout(()=>playTone(f,'square',0.1,0.18),i*75)); }
+function sfxPowerup(type){
+  if(type==='speed'){ playTone(400,'sawtooth',0.05,0.2); setTimeout(()=>playTone(600,'sawtooth',0.1,0.2),50); setTimeout(()=>playTone(800,'sawtooth',0.15,0.2),110); }
+  if(type==='shield'){ playTone(300,'sine',0.08,0.2,600); setTimeout(()=>playTone(500,'sine',0.12,0.2),100); }
+  if(type==='magnet'){ [350,450,550,650].forEach((f,i)=>setTimeout(()=>playTone(f,'triangle',0.1,0.15),i*60)); }
+}
+function sfxShieldPop(){ playTone(800,'sine',0.05,0.3,200); }
+function sfxFaster(){ playTone(440,'square',0.08,0.2); setTimeout(()=>playTone(660,'square',0.12,0.2),90); }
+
+let bgTimer=null,bgNodes=[];
+function startBg(){
+  stopBg();
+  const notes=[261,329,392,523,392,329];let step=0;
+  function tick(){
+    try{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.connect(g);g.connect(audioCtx.destination);
+      o.type='triangle'; o.frequency.value=notes[step++%notes.length];
+      g.gain.setValueAtTime(0.045,audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.17);
+      o.start();o.stop(audioCtx.currentTime+0.17);
+      bgNodes.push(o);
+    }catch(e){}
+    bgTimer=setTimeout(tick,155);
+  }tick();
+}
+function stopBg(){if(bgTimer)clearTimeout(bgTimer);bgNodes.forEach(n=>{try{n.stop();}catch(e){}});bgNodes=[];}
+
+// ══════════════════════════════════════════
+//  THREE.JS SETUP
+// ══════════════════════════════════════════
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x0d0520);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x0d0520,0.04);
+
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,200);
+camera.position.set(0,5,10);
+camera.lookAt(0,1,0);
+
+window.addEventListener('resize',()=>{
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+});
+
+// ── Lighting ──
+scene.add(new THREE.AmbientLight(0x443366,0.9));
+const sun=new THREE.DirectionalLight(0xffe494,2);
+sun.position.set(5,14,5); sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-25;sun.shadow.camera.right=25;
+sun.shadow.camera.top=25;sun.shadow.camera.bottom=-25;
+scene.add(sun);
+scene.add(Object.assign(new THREE.DirectionalLight(0x5533bb,0.5),{position:new THREE.Vector3(-5,3,-5)}));
+const pointLight=new THREE.PointLight(0xffe94e,2,30);
+pointLight.position.set(0,7,5); scene.add(pointLight);
+
+// ── Stars ──
+const starGeo=new THREE.BufferGeometry();
+const sp=new Float32Array(2400);
+for(let i=0;i<2400;i+=3){sp[i]=(Math.random()-0.5)*300;sp[i+1]=8+Math.random()*70;sp[i+2]=(Math.random()-0.5)*300;}
+starGeo.setAttribute('position',new THREE.BufferAttribute(sp,3));
+scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:0.22})));
+
+// ── Moon ──
+const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(3.5,12,12),new THREE.MeshToonMaterial({color:0xfff8e0}));
+moonMesh.position.set(-35,38,-90); scene.add(moonMesh);
+
+// ══════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════
+const LANE_W=2.2;
+const LANES=[-LANE_W,0,LANE_W];
+const TILE_LEN=6, TILE_COUNT=18;
+const SPAWN_Z=-60;
+const DESPAWN_Z=14;
+const BASE_SPEED=10;
+const PU_DURATION={speed:6,shield:10,magnet:8};
+
+// ══════════════════════════════════════════
+//  TRACK
+// ══════════════════════════════════════════
+const tileMats=[
+  new THREE.MeshLambertMaterial({color:0x2a1850}),
+  new THREE.MeshLambertMaterial({color:0x371e66}),
+];
+const tiles=[];
+function makeTile(z){
+  const idx=Math.abs(Math.floor(z/TILE_LEN))%2;
+  const m=new THREE.Mesh(new THREE.BoxGeometry(LANE_W*3+0.6,0.4,TILE_LEN),tileMats[idx]);
+  m.position.set(0,-0.2,z); m.receiveShadow=true; scene.add(m);
+  // Edge glow
+  const eg=new THREE.BoxGeometry(0.12,0.06,TILE_LEN);
+  const em=new THREE.MeshBasicMaterial({color:0x7733cc});
+  [-LANE_W*1.55,LANE_W*1.55].forEach(ex=>{
+    const e=new THREE.Mesh(eg,em); e.position.set(ex,0.03,z); scene.add(e); m.userData.edges=m.userData.edges||[]; m.userData.edges.push(e);
+  });
+  // Lane dividers
+  [LANE_W*-0.5,LANE_W*0.5].forEach(dx=>{
+    const d=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,TILE_LEN),new THREE.MeshBasicMaterial({color:0x4e2a80}));
+    d.position.set(dx,0.03,z); scene.add(d);
+  });
+  return m;
+}
+for(let i=0;i<TILE_COUNT;i++) tiles.push(makeTile(-i*TILE_LEN));
+
+// ── Trees ──
+const trunkM=new THREE.MeshLambertMaterial({color:0x3d2108});
+const leafM=new THREE.MeshLambertMaterial({color:0x1a4a1a});
+const sideTrees=[];
+function makeTree(x,z){
+  const g=new THREE.Group();
+  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,3,6),trunkM),{position:new THREE.Vector3(0,1.5,0)}));
+  [4,5.6].forEach((y,i)=>{
+    const c=new THREE.Mesh(new THREE.ConeGeometry(1.3-i*0.15,2.8-i*0.3,6),leafM);
+    c.position.y=y; g.add(c);
+  });
+  g.position.set(x,0,z); g.rotation.y=Math.random()*Math.PI;
+  scene.add(g); return g;
+}
+for(let z=4;z>-TILE_COUNT*TILE_LEN;z-=7){
+  sideTrees.push(makeTree(-5.8,z)); sideTrees.push(makeTree(6,z));
+}
+// Temple pillars
+const pillarM=new THREE.MeshLambertMaterial({color:0x3d2460});
+for(let z=0;z>-120;z-=18){
+  [-9,9].forEach(x=>{
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.45,9,8),pillarM);
+    p.position.set(x,4,z); scene.add(p);
+  });
+}
+
+// ══════════════════════════════════════════
+//  MONKEY
+// ══════════════════════════════════════════
+function makeMonkey(){
+  const g=new THREE.Group();
+  const bodyM=new THREE.MeshToonMaterial({color:0xc97c30});
+  const darkM=new THREE.MeshToonMaterial({color:0x7a4a15});
+  const faceM=new THREE.MeshToonMaterial({color:0xf5c89a});
+  const eyeM=new THREE.MeshToonMaterial({color:0x111111});
+  const whiteM=new THREE.MeshToonMaterial({color:0xffffff});
+
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.72,0.82,0.52),bodyM);
+  body.position.y=0.41; g.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.66,0.62,0.56),bodyM);
+  head.position.y=1.16; g.add(head);
+  const face=new THREE.Mesh(new THREE.BoxGeometry(0.46,0.4,0.1),faceM);
+  face.position.set(0,1.09,0.31); g.add(face);
+  [-0.13,0.13].forEach(ex=>{
+    const ew=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.11,0.06),whiteM);
+    ew.position.set(ex,1.19,0.33); g.add(ew);
+    const ep=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.06),eyeM);
+    ep.position.set(ex,1.19,0.36); g.add(ep);
+  });
+  [-0.4,0.4].forEach(ex=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(0.19,0.23,0.19),bodyM);
+    ear.position.set(ex,1.16,0); g.add(ear);
+    const ei=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.15,0.11),faceM);
+    ei.position.set(ex,1.16,0.06); g.add(ei);
+  });
+  const legL=new THREE.Mesh(new THREE.BoxGeometry(0.23,0.52,0.23),darkM); legL.position.set(-0.21,-0.3,0); g.add(legL);
+  const legR=new THREE.Mesh(new THREE.BoxGeometry(0.23,0.52,0.23),darkM); legR.position.set(0.21,-0.3,0); g.add(legR);
+  const armL=new THREE.Mesh(new THREE.BoxGeometry(0.19,0.52,0.19),bodyM); armL.position.set(-0.49,0.36,0); g.add(armL);
+  const armR=new THREE.Mesh(new THREE.BoxGeometry(0.19,0.52,0.19),bodyM); armR.position.set(0.49,0.36,0); g.add(armR);
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.04,0.85,6),darkM);
+  tail.position.set(0.12,0.14,-0.37); tail.rotation.x=0.85; tail.rotation.z=0.5; g.add(tail);
+
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  g._legL=legL; g._legR=legR; g._armL=armL; g._armR=armR; g._body=body; g._head=head;
+  return g;
+}
+const monkey=makeMonkey();
+monkey.position.set(0,0.55,4); scene.add(monkey);
+
+// ── Shield bubble ──
+const shieldMesh=new THREE.Mesh(
+  new THREE.SphereGeometry(1.0,16,16),
+  new THREE.MeshBasicMaterial({color:0x44aaff,transparent:true,opacity:0.28,wireframe:false,side:THREE.DoubleSide})
+);
+shieldMesh.visible=false; monkey.add(shieldMesh);
+
+// ── Magnet field ring ──
+const magnetRing=new THREE.Mesh(
+  new THREE.TorusGeometry(1.8,0.06,8,32),
+  new THREE.MeshBasicMaterial({color:0xffe94e,transparent:true,opacity:0.35})
+);
+magnetRing.rotation.x=Math.PI/2; magnetRing.visible=false; monkey.add(magnetRing);
+
+// ══════════════════════════════════════════
+//  MATERIALS POOL
+// ══════════════════════════════════════════
+const obsMats=[
+  new THREE.MeshToonMaterial({color:0xe03a5a}),
+  new THREE.MeshToonMaterial({color:0xff6644}),
+  new THREE.MeshToonMaterial({color:0x4488ff}),
+];
+const bananaMat=new THREE.MeshToonMaterial({color:0xffe94e,emissive:0xaa7700,emissiveIntensity:0.4});
+const enemyBodyM=new THREE.MeshToonMaterial({color:0xcc2244});
+const enemyEyeM=new THREE.MeshToonMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:0.8});
+const puMats={
+  speed:new THREE.MeshToonMaterial({color:0xff6644,emissive:0xaa3300,emissiveIntensity:0.5}),
+  shield:new THREE.MeshToonMaterial({color:0x44aaff,emissive:0x002255,emissiveIntensity:0.5}),
+  magnet:new THREE.MeshToonMaterial({color:0xffe94e,emissive:0xaa7700,emissiveIntensity:0.5}),
+};
+
+// ══════════════════════════════════════════
+//  FACTORY: OBSTACLE
+// ══════════════════════════════════════════
+function makeObstacle(){
+  const laneIdx=Math.floor(Math.random()*3);
+  const roll=Math.random();
+  let w=0.85,h,d=0.72;
+  if(roll<0.45) h=1.9;
+  else if(roll<0.75){h=0.65;w=1.7;}
+  else h=1.1;
+  const mat=obsMats[Math.floor(Math.random()*obsMats.length)];
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  mesh.position.set(LANES[laneIdx],h/2,SPAWN_Z);
+  mesh.castShadow=true;
+  const top=new THREE.Mesh(new THREE.BoxGeometry(w+0.06,0.1,d+0.06),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.25}));
+  top.position.y=h/2+0.05; mesh.add(top);
+  scene.add(mesh);
+  return {mesh,laneIdx,w,h,type:'obstacle'};
+}
+
+// ══════════════════════════════════════════
+//  FACTORY: ENEMY (gorilla or bird)
+// ══════════════════════════════════════════
+function makeEnemy(){
+  const isGorilla=Math.random()<0.5;
+  const g=new THREE.Group();
+  if(isGorilla){
+    // Gorilla: big low-poly ape
+    const body=new THREE.Mesh(new THREE.BoxGeometry(0.9,1.1,0.7),enemyBodyM); body.position.y=0.55; g.add(body);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.6,0.6),enemyBodyM); head.position.y=1.25; g.add(head);
+    [-0.25,0.25].forEach(ex=>{
+      const e=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.05),enemyEyeM); e.position.set(ex,1.3,0.32); g.add(e);
+    });
+    // Arms down (gorilla walk)
+    [-0.6,0.6].forEach(ax=>{
+      const arm=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.7,0.22),enemyBodyM); arm.position.set(ax,0.2,0); g.add(arm);
+    });
+    g._isGorilla=true;
+    // Gorilla patrols lanes
+    const startLane=Math.floor(Math.random()*3);
+    g.position.set(LANES[startLane],0.55,SPAWN_Z);
+    g._lane=startLane; g._patrolTimer=1.5+Math.random()*1.5;
+  } else {
+    // Bird: angular flying enemy
+    const body=new THREE.Mesh(new THREE.ConeGeometry(0.3,1.0,4),enemyBodyM);
+    body.rotation.z=Math.PI/2; body.position.set(0,0,0); g.add(body);
+    [-1,1].forEach(s=>{
+      const wing=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.5,0.7),enemyBodyM);
+      wing.position.set(0,s*0.35,0); g.add(wing);
+    });
+    const eye=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.08),enemyEyeM);
+    eye.position.set(0.4,0.1,0); g.add(eye);
+    g._isGorilla=false;
+    const startLane=Math.floor(Math.random()*3);
+    g.position.set(LANES[startLane],1.2,SPAWN_Z);
+    g._lane=startLane; g._patrolTimer=0;
+  }
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  scene.add(g);
+  return {mesh:g,type:'enemy',isGorilla,laneIdx:g._lane};
+}
+
+// ══════════════════════════════════════════
+//  FACTORY: BANANA
+// ══════════════════════════════════════════
+function makeBanana(z,forceLane){
+  const laneIdx=forceLane!==undefined?forceLane:Math.floor(Math.random()*3);
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.56,8),bananaMat);
+  body.rotation.z=0.5; g.add(body);
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.38,8,8),
+    new THREE.MeshBasicMaterial({color:0xffe94e,transparent:true,opacity:0.14}));
+  g.add(glow);
+  g.position.set(LANES[laneIdx],0.9,z===undefined?SPAWN_Z:z);
+  scene.add(g);
+  return {mesh:g,laneIdx,taken:false,type:'banana'};
+}
+
+// ══════════════════════════════════════════
+//  FACTORY: POWERUP TOKEN
+// ══════════════════════════════════════════
+const PU_TYPES=['speed','shield','magnet'];
+const PU_SYMBOLS={speed:'⚡',shield:'🛡️',magnet:'🧲'};
+function makePowerup(){
+  const puType=PU_TYPES[Math.floor(Math.random()*3)];
+  const laneIdx=Math.floor(Math.random()*3);
+  const g=new THREE.Group();
+  const inner=new THREE.Mesh(new THREE.IcosahedronGeometry(0.38,0),puMats[puType]);
+  g.add(inner);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.06,8,24),
+    new THREE.MeshBasicMaterial({color:puType==='speed'?0xff6644:puType==='shield'?0x44aaff:0xffe94e,transparent:true,opacity:0.6}));
+  ring.rotation.x=Math.PI/2; g.add(ring);
+  g.position.set(LANES[laneIdx],1.1,SPAWN_Z);
+  g._inner=inner; g._ring=ring;
+  scene.add(g);
+  return {mesh:g,puType,laneIdx,taken:false,type:'powerup'};
+}
+
+// ══════════════════════════════════════════
+//  PARTICLES
+// ══════════════════════════════════════════
+const particlePool=[];
+function spawnParticles(pos,color,n=10,spread=4){
+  for(let i=0;i<n;i++){
+    let p=particlePool.find(x=>x.life<=0);
+    if(!p){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.14,0.14),
+        new THREE.MeshBasicMaterial({color,transparent:true}));
+      scene.add(m); p={mesh:m,vx:0,vy:0,vz:0,life:0,maxLife:0};
+      particlePool.push(p);
+    }
+    p.mesh.material.color.setHex(color);
+    p.mesh.position.copy(pos);
+    p.vx=(Math.random()-0.5)*spread; p.vy=2+Math.random()*4; p.vz=(Math.random()-0.5)*spread;
+    p.life=1; p.maxLife=1;
+    p.mesh.visible=true;
+  }
+}
+
+// ══════════════════════════════════════════
+//  SCREEN FX HELPERS
+// ══════════════════════════════════════════
+let shakeAmount=0,shakeFade=0;
+const cameraBase=new THREE.Vector3(0,5,10);
+
+function doShake(amount=0.4,dur=12){ shakeAmount=amount; shakeFade=dur; }
+
+let vigTimer=null;
+function doVignette(color='red',dur=350){
+  const el=document.getElementById('vignette');
+  el.style.boxShadow=color==='red'?'inset 0 0 140px 70px #ff000088':'inset 0 0 140px 70px #44aaff88';
+  el.style.opacity='1';
+  clearTimeout(vigTimer); vigTimer=setTimeout(()=>el.style.opacity='0',dur);
+}
+
+let flashTimer=null;
+function doFlash(gold=false,dur=80){
+  const el=document.getElementById(gold?'goldflash':'flash');
+  el.style.opacity='0.55'; clearTimeout(flashTimer);
+  flashTimer=setTimeout(()=>el.style.opacity='0',dur);
+}
+
+let floatTimer=null;
+function showFloatText(txt,color='#ffe94e'){
+  const el=document.getElementById('floattext');
+  el.textContent=txt; el.style.color=color; el.style.opacity='1';
+  el.style.transform='translate(-50%,-50%) scale(1.3)';
+  clearTimeout(floatTimer);
+  setTimeout(()=>{el.style.transition='opacity 0.4s, transform 0.4s'; el.style.transform='translate(-50%,-80%) scale(1)';},50);
+  floatTimer=setTimeout(()=>el.style.opacity='0',700);
+}
+
+let speedTextTimer=null;
+function showFaster(){
+  const el=document.getElementById('speedmeter');
+  el.style.opacity='1'; sfxFaster();
+  clearTimeout(speedTextTimer); speedTextTimer=setTimeout(()=>el.style.opacity='0',900);
+}
+
+// ══════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════
+let state='idle';
+let score=0,best=0,bananas=0,lives=3;
+let speed=BASE_SPEED,frameCount=0;
+let lane=1,targetX=LANES[1];
+let monkeyY=0.55,vy=0,onGround=true,jumps=0;
+let hitCooldown=0;
+let comboCount=0,lastSpeedMilestone=0;
+let slowMo=1; // for death slow-motion
+
+// Powerup state
+const pu={
+  speed:{active:false,timer:0},
+  shield:{active:false,timer:0},
+  magnet:{active:false,timer:0},
+};
+
+// Dynamic lists
+const obstacles=[], enemies=[], bananaItems=[], powerups=[], particles=particlePool;
+
+// Tween state
+let leanTween=0; // target lean for lane switch
+let squashY=1,squashXZ=1; // for jump squash/stretch
+let armRaise=0; // for banana celebration
+
+// ══════════════════════════════════════════
+//  HUD
+// ══════════════════════════════════════════
+function updateHUD(){
+  document.getElementById('scoreDisplay').textContent=Math.floor(score);
+  document.getElementById('bananaDisplay').textContent=bananas;
+  document.getElementById('bestDisplay').textContent=Math.floor(best);
+  document.getElementById('hearts').textContent='❤️'.repeat(Math.max(0,lives))+'🖤'.repeat(Math.max(0,3-lives));
+  // Combo
+  const comboEl=document.getElementById('combo');
+  if(comboCount>=2){ comboEl.style.opacity='1'; document.getElementById('comboCount').textContent=comboCount; }
+  else comboEl.style.opacity='0';
+  // Powerup bars
+  ['speed','shield','magnet'].forEach(t=>{
+    const pill=document.getElementById('pu-'+t);
+    const fill=document.getElementById('pf-'+t);
+    if(pu[t].active){
+      pill.classList.add('active');
+      fill.style.width=(pu[t].timer/PU_DURATION[t]*100)+'%';
+    } else {
+      pill.classList.remove('active');
+      fill.style.width='0%';
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault(); onPressAction();}
+  if(e.code==='ArrowLeft'||e.code==='KeyA'){e.preventDefault(); changeLane(-1);}
+  if(e.code==='ArrowRight'||e.code==='KeyD'){e.preventDefault(); changeLane(1);}
+});
+let tx0=null,ty0=null;
+document.addEventListener('touchstart',e=>{tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(tx0===null)return;
+  const dx=e.changedTouches[0].clientX-tx0,dy=e.changedTouches[0].clientY-ty0;
+  if(Math.abs(dy)>Math.abs(dx)&&dy<-25) onPressAction();
+  else if(Math.abs(dx)>25){ if(dx<0)changeLane(-1); else changeLane(1); }
+  else onPressAction();
+  tx0=null;ty0=null;
+},{passive:true});
+
+function onPressAction(){
+  if(state==='idle'||state==='dead'){ startGame(); return; }
+  if(state==='playing') handleJump();
+}
+function changeLane(dir){
+  if(state!=='playing') return;
+  const newLane=Math.max(0,Math.min(2,lane+dir));
+  if(newLane===lane) return;
+  lane=newLane; targetX=LANES[lane];
+  leanTween=dir*0.35;
+}
+function handleJump(){
+  if(jumps>=2) return;
+  sfxJump(jumps===1);
+  vy=jumps===0?10:8;
+  onGround=false; jumps++;
+  // Squash on launch
+  squashY=1.3; squashXZ=0.75;
+  if(jumps===2) spawnParticles(monkey.position.clone().add(new THREE.Vector3(0,0.5,0)),0xaa66ff,10,3);
+}
+
+// ══════════════════════════════════════════
+//  GAME CONTROL
+// ══════════════════════════════════════════
+function startGame(){
+  audioCtx.resume();
+  clearGame();
+  state='playing'; slowMo=1;
+  document.getElementById('overlay').classList.add('hidden');
+  sfxStart(); setTimeout(startBg,370);
+}
+
+function clearGame(){
+  const clear=arr=>{arr.forEach(o=>{if(o.mesh)scene.remove(o.mesh);});arr.length=0;};
+  clear(obstacles); clear(enemies); clear(bananaItems); clear(powerups);
+  particlePool.forEach(p=>{p.life=0;p.mesh.visible=false;});
+  score=0;bananas=0;lives=3;speed=BASE_SPEED;frameCount=0;
+  lane=1;targetX=LANES[1]; monkeyY=0.55; vy=0; onGround=true; jumps=0;
+  hitCooldown=0; comboCount=0; lastSpeedMilestone=0; slowMo=1;
+  leanTween=0; squashY=1; squashXZ=1; armRaise=0;
+  ['speed','shield','magnet'].forEach(t=>{pu[t].active=false;pu[t].timer=0;});
+  shieldMesh.visible=false; magnetRing.visible=false;
+  monkey.visible=true; monkey.position.set(0,0.55,4); monkey.rotation.set(0,0,0);
+  updateHUD();
+}
+
+function triggerDeath(){
+  if(state==='dying'||state==='dead') return;
+  state='dying'; slowMo=1; stopBg(); sfxDie();
+  doShake(0.8,30); doVignette('red',1200);
+  // Spin-out tween
+  let spinT=0;
+  const spin=setInterval(()=>{
+    slowMo=Math.max(0.15,slowMo-0.04);
+    spinT+=0.16;
+    monkey.rotation.z+=0.18;
+    monkey.position.y+=0.05;
+    if(spinT>1.5){
+      clearInterval(spin);
+      if(score>best)best=score;
+      state='dead';
+      document.getElementById('ovTitle').textContent='GAME OVER 🐒';
+      document.getElementById('ovSub').innerHTML=`SCORE: ${Math.floor(score)} &nbsp;|&nbsp; 🍌 ${bananas}<br>BEST: ${Math.floor(best)}<br><br><span class="blink">PRESS SPACE OR TAP</span>`;
+      document.getElementById('overlay').classList.remove('hidden');
+      updateHUD();
+    }
+  },30);
+}
+
+function loseLife(){
+  if(hitCooldown>0) return;
+  // Shield absorbs hit
+  if(pu.shield.active){
+    sfxShieldPop();
+    pu.shield.active=false; pu.shield.timer=0;
+    shieldMesh.visible=false;
+    doFlash(false,100); doShake(0.25,8);
+    showFloatText('🛡️ BLOCKED!','#44aaff');
+    hitCooldown=60; updateHUD(); return;
+  }
+  lives--; sfxHit();
+  hitCooldown=90;
+  doShake(0.5,18); doVignette('red',500); doFlash(false,80);
+  spawnParticles(monkey.position.clone(),0xff3366,16,5);
+  updateHUD();
+  if(lives<=0) triggerDeath();
+}
+
+// ══════════════════════════════════════════
+//  SPAWN TIMERS
+// ══════════════════════════════════════════
+let obsTimer=0,enemyTimer=0,bananaTimer=0,puTimer=0;
+
+// ══════════════════════════════════════════
+//  MAIN UPDATE
+// ══════════════════════════════════════════
+const clock=new THREE.Clock();
+const GRAVITY=22;
+
+function update(rawDt){
+  const dt=Math.min(rawDt,0.05)*slowMo;
+  frameCount++;
+
+  const isPlaying=state==='playing';
+  const isAlive=state==='playing'||state==='dying';
+
+  if(isPlaying){
+    score+=dt*35;
+    const newSpeed=BASE_SPEED + score/350;
+    // Speed milestone every +3 units
+    if(Math.floor(newSpeed)>Math.floor(speed) && Math.floor(newSpeed)>lastSpeedMilestone){
+      lastSpeedMilestone=Math.floor(newSpeed); showFaster();
+    }
+    speed=newSpeed + (pu.speed.active?5:0);
+  }
+
+  // ── Powerup timers ──
+  if(isPlaying){
+    ['speed','shield','magnet'].forEach(t=>{
+      if(pu[t].active){ pu[t].timer-=dt; if(pu[t].timer<=0){pu[t].active=false;pu[t].timer=0;} }
+    });
+    shieldMesh.visible=pu.shield.active;
+    magnetRing.visible=pu.magnet.active;
+    if(pu.shield.active){ shieldMesh.material.opacity=0.2+Math.sin(clock.getElapsedTime()*8)*0.1; shieldMesh.rotation.y+=dt*2; }
+    if(pu.magnet.active){ magnetRing.rotation.z+=dt*3; }
+    if(pu.speed.active) spawnParticles(monkey.position.clone().add(new THREE.Vector3(0,0.5,0)),0xff6644,1,2);
+  }
+
+  // ── Track scroll ──
+  const scrollZ=speed*dt;
+  tiles.forEach(t=>{
+    t.position.z+=scrollZ;
+    if(t.position.z>TILE_LEN*2) t.position.z-=TILE_COUNT*TILE_LEN;
+  });
+  sideTrees.forEach(t=>{
+    t.position.z+=scrollZ*0.98;
+    if(t.position.z>12) t.position.z-=TILE_COUNT*TILE_LEN;
+  });
+
+  // ── Monkey horizontal (smooth lerp with overshoot) ──
+  const lerpT=Math.min(1,dt*16);
+  monkey.position.x+=(targetX-monkey.position.x)*lerpT;
+  // Lean tween (overshoot and recover)
+  leanTween*=Math.pow(0.88,dt*60);
+  monkey.rotation.z=leanTween+(targetX-monkey.position.x)*0.12;
+
+  // ── Monkey vertical ──
+  if(isAlive&&state!=='dying'){
+    monkeyY+=vy*dt;
+    vy-=GRAVITY*dt;
+    if(monkeyY<=0.55){
+      if(!onGround&&vy<-3){ squashY=0.7; squashXZ=1.3; } // land squash
+      monkeyY=0.55; vy=0; onGround=true; jumps=0;
+    } else onGround=false;
+  }
+  if(state!=='dying') monkey.position.y=monkeyY;
+
+  // ── Squash & stretch ease ──
+  squashY+=(1-squashY)*Math.min(1,dt*12);
+  squashXZ+=(1-squashXZ)*Math.min(1,dt*12);
+  monkey.scale.set(squashXZ,squashY,squashXZ);
+
+  // ── Arm raise (banana celebration) ──
+  armRaise*=Math.pow(0.85,dt*60);
+  monkey._armL.rotation.x=-armRaise; monkey._armR.rotation.x=-armRaise;
+
+  // ── Leg/arm run animation ──
+  if(onGround&&isPlaying){
+    const t=clock.getElapsedTime();
+    monkey._legL.rotation.x=Math.sin(t*speed*0.9)*0.55;
+    monkey._legR.rotation.x=-Math.sin(t*speed*0.9)*0.55;
+    if(armRaise<0.1){
+      monkey._armL.rotation.x=-Math.sin(t*speed*0.9)*0.45;
+      monkey._armR.rotation.x=Math.sin(t*speed*0.9)*0.45;
+    }
+  } else if(!onGround){
+    monkey._legL.rotation.x=0.35; monkey._legR.rotation.x=0.35;
+    if(armRaise<0.1){ monkey._armL.rotation.x=-0.6; monkey._armR.rotation.x=-0.6; }
+  }
+
+  // ── Hit cooldown ──
+  if(hitCooldown>0){
+    hitCooldown--;
+    monkey.visible=Math.floor(hitCooldown/6)%2===0;
+  } else monkey.visible=true;
+
+  // ── Camera shake ──
+  if(shakeFade>0){
+    shakeFade--; const s=shakeAmount*(shakeFade/12);
+    camera.position.x=cameraBase.x+(Math.random()-0.5)*s;
+    camera.position.y=cameraBase.y+(Math.random()-0.5)*s*0.5;
+  } else {
+    camera.position.x+=(cameraBase.x+monkey.position.x*0.14-camera.position.x)*dt*6;
+    camera.position.y=cameraBase.y+(onGround?0:0.6);
+  }
+  camera.lookAt(monkey.position.x*0.25,1.5,0);
+  pointLight.position.x=monkey.position.x;
+  pointLight.intensity=2+(pu.speed.active?1.5:0)+(pu.magnet.active?0.8:0);
+
+  if(!isPlaying) return;
+
+  // ══════════════════════════════════════════
+  //  SPAWN
+  // ══════════════════════════════════════════
+  obsTimer+=dt;
+  enemyTimer+=dt;
+  bananaTimer+=dt;
+  puTimer+=dt;
+
+  const obsInterval=Math.max(0.55,1.4-score/4000);
+  const enemyInterval=Math.max(2.5,5-score/1500);
+  const banInterval=0.75;
+  const puInterval=Math.max(8,18-score/500);
+
+  if(obsTimer>obsInterval){ obstacles.push(makeObstacle()); obsTimer=0; }
+  if(enemyTimer>enemyInterval){ enemies.push(makeEnemy()); enemyTimer=0; }
+  if(bananaTimer>banInterval){ bananaItems.push(makeBanana()); bananaTimer=0; }
+  if(puTimer>puInterval){ powerups.push(makePowerup()); puTimer=0; }
+
+  // ══════════════════════════════════════════
+  //  MOVE & COLLIDE: OBSTACLES
+  // ══════════════════════════════════════════
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];
+    o.mesh.position.z+=scrollZ;
+    if(o.mesh.position.z>DESPAWN_Z){scene.remove(o.mesh);obstacles.splice(i,1);continue;}
+    if(hitCooldown===0){
+      const dx=Math.abs(monkey.position.x-o.mesh.position.x);
+      const dz=Math.abs(monkey.position.z-o.mesh.position.z);
+      if(dx<0.38+o.w*0.42&&dz<0.75&&monkeyY<o.h+0.15){loseLife();break;}
+    }
+  }
+
+  // ══════════════════════════════════════════
+  //  MOVE & COLLIDE: ENEMIES
+  // ══════════════════════════════════════════
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    const t=clock.getElapsedTime();
+    e.mesh.position.z+=scrollZ*(e.isGorilla?1:1.6); // birds faster
+
+    if(e.mesh.position.z>DESPAWN_Z){scene.remove(e.mesh);enemies.splice(i,1);continue;}
+
+    if(e.isGorilla){
+      // Patrol lanes on a timer
+      e.mesh._patrolTimer=(e.mesh._patrolTimer||1.5)-dt;
+      if(e.mesh._patrolTimer<=0){
+        // Pick adjacent lane
+        const choices=[];
+        if(e.laneIdx>0)choices.push(e.laneIdx-1);
+        if(e.laneIdx<2)choices.push(e.laneIdx+1);
+        e.laneIdx=choices[Math.floor(Math.random()*choices.length)];
+        e.mesh.position.x+=(LANES[e.laneIdx]-e.mesh.position.x);
+        e.mesh._patrolTimer=1.2+Math.random()*1.2;
+      }
+      // Bounce animation
+      e.mesh.position.y=0.55+Math.abs(Math.sin(t*6))*0.18;
+      e.mesh.rotation.y=Math.sin(t*4)*0.2;
+    } else {
+      // Bird: sine weave between lanes
+      e.mesh.position.y=1.2+Math.sin(t*5+i)*0.4;
+      e.mesh.rotation.z=Math.sin(t*8)*0.15;
+    }
+
+    if(hitCooldown===0){
+      const dx=Math.abs(monkey.position.x-e.mesh.position.x);
+      const dz=Math.abs(monkey.position.z-e.mesh.position.z);
+      const dy=Math.abs(monkeyY-e.mesh.position.y);
+      if(dx<0.7&&dz<0.8&&dy<0.9){loseLife();break;}
+    }
+  }
+
+  // ══════════════════════════════════════════
+  //  MOVE & COLLIDE: BANANAS
+  // ══════════════════════════════════════════
+  const magnetRange=3.5;
+  for(let i=bananaItems.length-1;i>=0;i--){
+    const b=bananaItems[i];
+    b.mesh.position.z+=scrollZ;
+    b.mesh.rotation.y+=dt*3;
+
+    // Magnet pull
+    if(pu.magnet.active&&!b.taken){
+      const dx=monkey.position.x-b.mesh.position.x;
+      const dz=monkey.position.z-b.mesh.position.z;
+      const dist=Math.sqrt(dx*dx+dz*dz);
+      if(dist<magnetRange){
+        b.mesh.position.x+=dx*dt*8;
+        b.mesh.position.z+=dz*dt*8;
+        b.mesh.position.y+=(monkeyY-b.mesh.position.y)*dt*8;
+      }
+    }
+
+    if(b.mesh.position.z>DESPAWN_Z){scene.remove(b.mesh);bananaItems.splice(i,1);continue;}
+    if(!b.taken){
+      const dx=Math.abs(monkey.position.x-b.mesh.position.x);
+      const dz=Math.abs(monkey.position.z-b.mesh.position.z);
+      const dy=Math.abs(monkeyY-b.mesh.position.y);
+      if(dx<0.85&&dz<0.85&&dy<1){
+        b.taken=true; bananas++; score+=50;
+        comboCount++;
+        sfxBanana();
+        doFlash(true,60);
+        armRaise=1.1; // arms up!
+        spawnParticles(b.mesh.position.clone(),0xffe94e,14,4);
+        if(comboCount>=3){ showFloatText(`🍌 COMBO x${comboCount}!`,'#ffe94e'); sfxCombo(Math.min(comboCount,6)); }
+        else showFloatText('+50','#ffe94e');
+        scene.remove(b.mesh); bananaItems.splice(i,1);
+        updateHUD(); continue;
+      } else comboCount=0;
+    }
+  }
+
+  // ══════════════════════════════════════════
+  //  MOVE & COLLIDE: POWERUPS
+  // ══════════════════════════════════════════
+  for(let i=powerups.length-1;i>=0;i--){
+    const p=powerups[i];
+    p.mesh.position.z+=scrollZ;
+    p.mesh._inner.rotation.y+=dt*3;
+    p.mesh._ring.rotation.z+=dt*2;
+    p.mesh.position.y=1.1+Math.sin(clock.getElapsedTime()*3+i)*0.18;
+    if(p.mesh.position.z>DESPAWN_Z){scene.remove(p.mesh);powerups.splice(i,1);continue;}
+    if(!p.taken){
+      const dx=Math.abs(monkey.position.x-p.mesh.position.x);
+      const dz=Math.abs(monkey.position.z-p.mesh.position.z);
+      const dy=Math.abs(monkeyY-p.mesh.position.y);
+      if(dx<1&&dz<1&&dy<1.1){
+        p.taken=true;
+        pu[p.puType].active=true; pu[p.puType].timer=PU_DURATION[p.puType];
+        sfxPowerup(p.puType);
+        spawnParticles(p.mesh.position.clone(),
+          p.puType==='speed'?0xff6644:p.puType==='shield'?0x44aaff:0xffe94e,18,5);
+        doFlash(p.puType!=='shield',100);
+        showFloatText(PU_SYMBOLS[p.puType]+' '+p.puType.toUpperCase()+'!',
+          p.puType==='speed'?'#ff6644':p.puType==='shield'?'#44aaff':'#ffe94e');
+        scene.remove(p.mesh); powerups.splice(i,1);
+        updateHUD(); continue;
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════
+  //  PARTICLES
+  // ══════════════════════════════════════════
+  particlePool.forEach(p=>{
+    if(p.life<=0){p.mesh.visible=false;return;}
+    p.mesh.visible=true;
+    p.mesh.position.x+=p.vx*dt;
+    p.mesh.position.y+=p.vy*dt;
+    p.mesh.position.z+=p.vz*dt;
+    p.vy-=14*dt; p.life-=dt*1.8;
+    p.mesh.material.opacity=Math.max(0,p.life);
+  });
+
+  updateHUD();
+}
+
+// ══════════════════════════════════════════
+//  RENDER LOOP
+// ══════════════════════════════════════════
+const idleClock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const rawDt=Math.min(clock.getDelta(),0.05);
+  update(rawDt);
+  // Idle monkey bob
+  if(state==='idle') monkey.position.y=0.55+Math.sin(idleClock.getElapsedTime()*2)*0.09;
+  renderer.render(scene,camera);
+}
+animate();
+</script>
+
 </body>
-
 </html>
-```
